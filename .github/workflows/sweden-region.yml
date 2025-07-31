@@ -13,7 +13,6 @@ env:
   ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
   ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
   ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
 jobs:
   deploy:
@@ -34,7 +33,7 @@ jobs:
     - name: Terraform Init
       run: |
         terraform init \
-          -backend-config="subscription_id=${{ env.AZURE_SUBSCRIPTION_ID }}" \
+          -backend-config="subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
           -backend-config="resource_group_name=${{ secrets.TERRAFORM_STATE_RG }}" \
           -backend-config="storage_account_name=${{ secrets.TERRAFORM_STATE_SA }}" \
           -backend-config="container_name=${{ secrets.TERRAFORM_STATE_CONTAINER }}" \
@@ -70,7 +69,7 @@ jobs:
     - name: Terraform Init
       run: |
         terraform init \
-          -backend-config="subscription_id=${{ env.AZURE_SUBSCRIPTION_ID }}" \
+          -backend-config="subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
           -backend-config="resource_group_name=${{ secrets.TERRAFORM_STATE_RG }}" \
           -backend-config="storage_account_name=${{ secrets.TERRAFORM_STATE_SA }}" \
           -backend-config="container_name=${{ secrets.TERRAFORM_STATE_CONTAINER }}" \
