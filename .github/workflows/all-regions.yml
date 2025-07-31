@@ -9,6 +9,9 @@ jobs:
   trigger-regional-workflows:
     name: Trigger All Regional Workflows
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
     
     steps:
     - name: Checkout code
