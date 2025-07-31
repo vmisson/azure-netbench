@@ -1,0 +1,51 @@
+name: All Regions Network Benchmark
+
+on:
+  schedule:
+    - cron: '0 3 * * 0'  # Runs weekly on Sunday at 3 AM UTC
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  trigger-regional-workflows:
+    name: Trigger All Regional Workflows
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Trigger Asia Region Workflow
+      run: |
+        gh workflow run "Asia Region Network Benchmark" || echo "Failed to trigger Asia workflow"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Trigger Europe Region Workflow
+      run: |
+        gh workflow run "Europe Region Network Benchmark" || echo "Failed to trigger Europe workflow"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Trigger France Region Workflow
+      run: |
+        gh workflow run "France Region Network Benchmark" || echo "Failed to trigger France workflow"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Trigger Sweden Region Workflow
+      run: |
+        gh workflow run "Sweden Region Network Benchmark" || echo "Failed to trigger Sweden workflow"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Trigger US Region Workflow
+      run: |
+        gh workflow run "US Region Network Benchmark" || echo "Failed to trigger US workflow"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Summary
+      run: |
+        echo "## Regional Workflow Triggers Summary" >> $GITHUB_STEP_SUMMARY
+        echo "All regional network benchmark workflows have been triggered." >> $GITHUB_STEP_SUMMARY
+        echo "Check the Actions tab to monitor individual workflow progress." >> $GITHUB_STEP_SUMMARY

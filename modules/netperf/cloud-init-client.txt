@@ -1,0 +1,30 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+package_reboot_if_required: true
+packages:
+  - jq
+  - iperf3
+  - qperf
+runcmd:
+  - 'access_token=$(curl "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fstorage.azure.com%2F" -H Metadata:true | jq -r ".access_token")'
+  - region=$(hostname | cut -d'-' -f3)
+  - source=$(hostname | cut -d'-' -f4)
+  - qperf lx-srv-$region-az1 -ub -t 10 tcp_bw > az1_bw.txt
+  - qperf lx-srv-$region-az1 tcp_lat > az1_lat.txt
+  - uuid=$(uuidgen)
+  - bw=$(grep -o '[0-9.]\+ Gb/sec' az1_bw.txt)
+  - lat=$(grep -o '[0-9.]\+ us' az1_lat.txt)
+  - 'curl -X POST "https://sanetprdfrc001.table.core.windows.net/perf" -H "Authorization: Bearer $access_token" -H "x-ms-version: 2020-04-08" -H "Accept: application/json;odata=nometadata" -H "Content-Type: application/json" -d "{\"PartitionKey\":\"$uuid\",\"RowKey\":\"$region\", \"Source\":\"$source\", \"Destination\":\"az1\", \"Bandwidth\":\"$bw\", \"Latency\":\"$lat\"}"'
+  - qperf lx-srv-$region-az2 -ub -t 10 tcp_bw > az2_bw.txt
+  - qperf lx-srv-$region-az2 tcp_lat > az2_lat.txt
+  - uuid=$(uuidgen)
+  - bw=$(grep -o '[0-9.]\+ Gb/sec' az2_bw.txt)
+  - lat=$(grep -o '[0-9.]\+ us' az2_lat.txt)
+  - 'curl -X POST "https://sanetprdfrc001.table.core.windows.net/perf" -H "Authorization: Bearer $access_token" -H "x-ms-version: 2020-04-08" -H "Accept: application/json;odata=nometadata" -H "Content-Type: application/json" -d "{\"PartitionKey\":\"$uuid\",\"RowKey\":\"$region\", \"Source\":\"$source\", \"Destination\":\"az2\", \"Bandwidth\":\"$bw\", \"Latency\":\"$lat\"}"'
+  - qperf lx-srv-$region-az3 -ub -t 10 tcp_bw > az3_bw.txt
+  - qperf lx-srv-$region-az3 tcp_lat > az3_lat.txt
+  - uuid=$(uuidgen)
+  - bw=$(grep -o '[0-9.]\+ Gb/sec' az3_bw.txt)
+  - lat=$(grep -o '[0-9.]\+ us' az3_lat.txt)
+  - 'curl -X POST "https://sanetprdfrc001.table.core.windows.net/perf" -H "Authorization: Bearer $access_token" -H "x-ms-version: 2020-04-08" -H "Accept: application/json;odata=nometadata" -H "Content-Type: application/json" -d "{\"PartitionKey\":\"$uuid\",\"RowKey\":\"$region\", \"Source\":\"$source\", \"Destination\":\"az3\", \"Bandwidth\":\"$bw\", \"Latency\":\"$lat\"}"'
