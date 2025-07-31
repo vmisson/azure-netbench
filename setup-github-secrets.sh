@@ -55,6 +55,12 @@ SP_OUTPUT=$(az ad sp create-for-rbac \
     --name "$SP_NAME" \
     --role "Contributor" \
     --scopes "/subscriptions/$SUBSCRIPTION_ID" \
+    --output json) 
+
+SP_OUTPUT=$(az ad sp create-for-rbac \
+    --name "$SP_NAME" \
+    --role "Role Based Access Control Administrator" \
+    --scopes "/subscriptions/$SUBSCRIPTION_ID" \
     --output json)
 
 CLIENT_ID=$(echo $SP_OUTPUT | jq -r '.appId')

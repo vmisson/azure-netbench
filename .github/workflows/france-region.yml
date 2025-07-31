@@ -1,8 +1,6 @@
 name: France Region Network Benchmark
 
 on:
-  schedule:
-    - cron: '0 2 * * *'  # Runs daily at 2 AM UTC
   workflow_dispatch:  # Allow manual trigger
 
 env:
