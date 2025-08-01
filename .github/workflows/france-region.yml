@@ -46,7 +46,10 @@ jobs:
           --resource-group "${{ secrets.TERRAFORM_STATE_RG }}" \
           --account-name "${{ secrets.TERRAFORM_STATE_SA }}" \
           --ip-address "${{ steps.get_ip.outputs.runner_ip }}"
-        
+        az storage account update \
+          --resource-group "${{ secrets.TERRAFORM_STATE_RG }}" \
+          --name "${{ secrets.TERRAFORM_STATE_SA }}" \
+          --public-network-access Enabled       
         # Wait a moment for the rule to take effect
         sleep 30
 
@@ -78,6 +81,10 @@ jobs:
           --resource-group "${{ secrets.TERRAFORM_STATE_RG }}" \
           --account-name "${{ secrets.TERRAFORM_STATE_SA }}" \
           --ip-address "${{ steps.get_ip.outputs.runner_ip }}"
+        az storage account update \
+          --resource-group "${{ secrets.TERRAFORM_STATE_RG }}" \
+          --name "${{ secrets.TERRAFORM_STATE_SA }}" \
+          --public-network-access Disabled
       continue-on-error: true
 
   destroy:
@@ -113,7 +120,10 @@ jobs:
           --resource-group "${{ secrets.TERRAFORM_STATE_RG }}" \
           --account-name "${{ secrets.TERRAFORM_STATE_SA }}" \
           --ip-address "${{ steps.get_ip_destroy.outputs.runner_ip }}"
-        
+        az storage account update \
+          --resource-group "${{ secrets.TERRAFORM_STATE_RG }}" \
+          --name "${{ secrets.TERRAFORM_STATE_SA }}" \
+          --public-network-access Enabled
         # Wait a moment for the rule to take effect
         sleep 30
 
@@ -137,4 +147,8 @@ jobs:
           --resource-group "${{ secrets.TERRAFORM_STATE_RG }}" \
           --account-name "${{ secrets.TERRAFORM_STATE_SA }}" \
           --ip-address "${{ steps.get_ip_destroy.outputs.runner_ip }}"
+        az storage account update \
+          --resource-group "${{ secrets.TERRAFORM_STATE_RG }}" \
+          --name "${{ secrets.TERRAFORM_STATE_SA }}" \
+          --public-network-access Disabled          
       continue-on-error: true
