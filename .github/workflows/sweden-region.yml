@@ -28,6 +28,31 @@ jobs:
       with:
         terraform_version: ~1.5
 
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
+
+    - name: Get Runner Public IP
+      id: get_ip
+      run: |
+        RUNNER_IP=$(curl -s https://api.ipify.org)
+        echo "runner_ip=$RUNNER_IP" >> $GITHUB_OUTPUT
+        echo "Runner IP: $RUNNER_IP"
+
+    - name: Allow Runner IP in Storage Account Firewall
+      run: |
+        az storage account network-rule add \
+          --resource-group "${{ secrets.TERRAFORM_STATE_RG }}" \
+          --account-name "${{ secrets.TERRAFORM_STATE_SA }}" \
+          --ip-address "${{ steps.get_ip.outputs.runner_ip }}"
+        az storage account update \
+          --resource-group "${{ secrets.TERRAFORM_STATE_RG }}" \
+          --name "${{ secrets.TERRAFORM_STATE_SA }}" \
+          --public-network-access Enabled       
+        # Wait a moment for the rule to take effect
+        sleep 30
+
     - name: Terraform Init
       run: |
         terraform init \
@@ -49,6 +74,19 @@ jobs:
       if: steps.apply.outcome == 'success'
       run: sleep 300  # Wait 5 minutes for benchmark to complete
 
+    - name: Remove Runner IP from Storage Account Firewall
+      if: always()  # Always run to clean up firewall rule
+      run: |
+        az storage account network-rule remove \
+          --resource-group "${{ secrets.TERRAFORM_STATE_RG }}" \
+          --account-name "${{ secrets.TERRAFORM_STATE_SA }}" \
+          --ip-address "${{ steps.get_ip.outputs.runner_ip }}"
+        az storage account update \
+          --resource-group "${{ secrets.TERRAFORM_STATE_RG }}" \
+          --name "${{ secrets.TERRAFORM_STATE_SA }}" \
+          --public-network-access Disabled
+      continue-on-error: true
+
   destroy:
     name: Destroy Infrastructure - Sweden
     runs-on: ubuntu-latest
@@ -64,6 +102,31 @@ jobs:
       with:
         terraform_version: ~1.5
 
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
+
+    - name: Get Runner Public IP
+      id: get_ip_destroy
+      run: |
+        RUNNER_IP=$(curl -s https://api.ipify.org)
+        echo "runner_ip=$RUNNER_IP" >> $GITHUB_OUTPUT
+        echo "Runner IP: $RUNNER_IP"
+
+    - name: Allow Runner IP in Storage Account Firewall
+      run: |
+        az storage account network-rule add \
+          --resource-group "${{ secrets.TERRAFORM_STATE_RG }}" \
+          --account-name "${{ secrets.TERRAFORM_STATE_SA }}" \
+          --ip-address "${{ steps.get_ip_destroy.outputs.runner_ip }}"
+        az storage account update \
+          --resource-group "${{ secrets.TERRAFORM_STATE_RG }}" \
+          --name "${{ secrets.TERRAFORM_STATE_SA }}" \
+          --public-network-access Enabled
+        # Wait a moment for the rule to take effect
+        sleep 30
+
     - name: Terraform Init
       run: |
         terraform init \
@@ -75,4 +138,17 @@ jobs:
 
     - name: Terraform Destroy
       run: terraform destroy -auto-approve -var-file="tfvars/sweden.tfvars"
+      continue-on-error: true
+
+    - name: Remove Runner IP from Storage Account Firewall
+      if: always()  # Always run to clean up firewall rule
+      run: |
+        az storage account network-rule remove \
+          --resource-group "${{ secrets.TERRAFORM_STATE_RG }}" \
+          --account-name "${{ secrets.TERRAFORM_STATE_SA }}" \
+          --ip-address "${{ steps.get_ip_destroy.outputs.runner_ip }}"
+        az storage account update \
+          --resource-group "${{ secrets.TERRAFORM_STATE_RG }}" \
+          --name "${{ secrets.TERRAFORM_STATE_SA }}" \
+          --public-network-access Disabled          
       continue-on-error: true
