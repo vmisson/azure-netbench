@@ -38,7 +38,7 @@ jobs:
         az storage account update \
           --resource-group "${{ secrets.TERRAFORM_STATE_RG }}" \
           --name "${{ secrets.TERRAFORM_STATE_SA }}" \
-          --public-network-access Enabled
+          --public-network-access Enabled \
           --default-action Allow
         # Wait a moment for the rule to take effect
         sleep 30
@@ -89,7 +89,7 @@ jobs:
         az storage account update \
           --resource-group "${{ secrets.TERRAFORM_STATE_RG }}" \
           --name "${{ secrets.TERRAFORM_STATE_SA }}" \
-          --public-network-access Enabled
+          --public-network-access Enabled \
           --default-action Allow
         # Wait a moment for the rule to take effect
         sleep 30
