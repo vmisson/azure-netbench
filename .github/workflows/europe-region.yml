@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       terraform_status: ${{ steps.apply.outcome }}
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -38,7 +38,8 @@ jobs:
         az storage account update \
           --resource-group "${{ secrets.TERRAFORM_STATE_RG }}" \
           --name "${{ secrets.TERRAFORM_STATE_SA }}" \
-          --public-network-access Enabled       
+          --public-network-access Enabled
+          --default-action Allow
         # Wait a moment for the rule to take effect
         sleep 30
 
@@ -68,7 +69,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy
     if: always()  # Run destroy even if deploy fails
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -88,7 +89,8 @@ jobs:
         az storage account update \
           --resource-group "${{ secrets.TERRAFORM_STATE_RG }}" \
           --name "${{ secrets.TERRAFORM_STATE_SA }}" \
-          --public-network-access Enabled       
+          --public-network-access Enabled
+          --default-action Allow
         # Wait a moment for the rule to take effect
         sleep 30
 
