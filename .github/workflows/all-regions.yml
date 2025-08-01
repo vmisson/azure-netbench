@@ -23,11 +23,17 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Wait before next trigger
+      run: sleep 60
+
     - name: Trigger Europe Region Workflow
       run: |
         gh workflow run "Europe Region Network Benchmark" || echo "Failed to trigger Europe workflow"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Wait before next trigger
+      run: sleep 60
 
     - name: Trigger France Region Workflow
       run: |
@@ -35,11 +41,17 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Wait before next trigger
+      run: sleep 60
+
     - name: Trigger Sweden Region Workflow
       run: |
         gh workflow run "Sweden Region Network Benchmark" || echo "Failed to trigger Sweden workflow"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Wait before next trigger
+      run: sleep 60
 
     - name: Trigger US Region Workflow
       run: |

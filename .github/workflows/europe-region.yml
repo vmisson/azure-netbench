@@ -51,7 +51,7 @@ jobs:
           --name "${{ secrets.TERRAFORM_STATE_SA }}" \
           --public-network-access Enabled       
         # Wait a moment for the rule to take effect
-        sleep 30
+        sleep 60
 
     - name: Terraform Init
       run: |
@@ -125,7 +125,7 @@ jobs:
           --name "${{ secrets.TERRAFORM_STATE_SA }}" \
           --public-network-access Enabled
         # Wait a moment for the rule to take effect
-        sleep 30
+        sleep 60
 
     - name: Terraform Init
       run: |
