@@ -103,6 +103,21 @@ jobs:
           -backend-config="container_name=${{ secrets.TERRAFORM_STATE_CONTAINER }}" \
           -backend-config="key=us.tfstate"
 
+    - name: Get Resource Group Name
+      id: get_rg_name
+      run: |
+        RG_NAME=$(terraform output -raw resource_group_name 2>/dev/null || echo "")
+        echo "rg_name=$RG_NAME" >> $GITHUB_OUTPUT
+        echo "Resource Group Name: $RG_NAME"
+      continue-on-error: true
+
     - name: Terraform Destroy
       run: terraform destroy -auto-approve -var-file="tfvars/us.tfvars"
       continue-on-error: true
+
+    - name: Force delete Resource Group (if needed)
+      if: always() && steps.get_rg_name.outputs.rg_name != ''
+      run: |
+        echo "Force deleting resource group: ${{ steps.get_rg_name.outputs.rg_name }}"
+        az group delete --name "${{ steps.get_rg_name.outputs.rg_name }}" --yes --no-wait || true
+        echo "Resource group deletion command executed (may take time to complete)"
