@@ -17,189 +17,327 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Trigger Africa Region Workflow
+    - name: Trigger Australia East Network Benchmark
       run: |
-        gh workflow run "Africa Network Benchmark" || echo "Failed to trigger Africa workflow"
+        gh workflow run "Australia East Network Benchmark" || echo "Failed to trigger australiaeast workflow"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 60
+      run: sleep 10
 
-    - name: Trigger Asia East Region Workflow
+    - name: Trigger Austria East Network Benchmark
       run: |
-        gh workflow run "Asia East Network Benchmark" || echo "Failed to trigger Asia East workflow"
+        gh workflow run "Austria East Network Benchmark" || echo "Failed to trigger austriaeast workflow"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 60
+      run: sleep 10
 
-    - name: Trigger Asia Southeast Region Workflow
+    - name: Trigger Brazil South Network Benchmark
       run: |
-        gh workflow run "Asia Southeast Network Benchmark" || echo "Failed to trigger Asia Southeast workflow"
+        gh workflow run "Brazil South Network Benchmark" || echo "Failed to trigger brazilsouth workflow"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 60
+      run: sleep 10
 
-    - name: Trigger Canada Region Workflow
+    - name: Trigger Canada Central Network Benchmark
       run: |
-        gh workflow run "Canada Network Benchmark" || echo "Failed to trigger Canada workflow"
+        gh workflow run "Canada Central Network Benchmark" || echo "Failed to trigger canadacentral workflow"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 60
+      run: sleep 10
 
-    - name: Trigger Dach Region Region Workflow
+    - name: Trigger Central India Network Benchmark
       run: |
-        gh workflow run "Dach Region Network Benchmark" || echo "Failed to trigger Dach Region workflow"
+        gh workflow run "Central India Network Benchmark" || echo "Failed to trigger centralindia workflow"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 60
+      run: sleep 10
 
-    - name: Trigger Europe North Region Workflow
+    - name: Trigger Central US Network Benchmark
       run: |
-        gh workflow run "Europe North Network Benchmark" || echo "Failed to trigger Europe North workflow"
+        gh workflow run "Central US Network Benchmark" || echo "Failed to trigger centralus workflow"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 60
+      run: sleep 10
 
-    - name: Trigger Europe South Region Workflow
+    - name: Trigger Chile Central Network Benchmark
       run: |
-        gh workflow run "Europe South Network Benchmark" || echo "Failed to trigger Europe South workflow"
+        gh workflow run "Chile Central Network Benchmark" || echo "Failed to trigger chilecentral workflow"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 60
+      run: sleep 10
 
-    - name: Trigger India Region Workflow
+    - name: Trigger East Asia Network Benchmark
       run: |
-        gh workflow run "India Network Benchmark" || echo "Failed to trigger India workflow"
+        gh workflow run "East Asia Network Benchmark" || echo "Failed to trigger eastasia workflow"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 60
+      run: sleep 10
 
-    - name: Trigger Israel Region Workflow
+    - name: Trigger East US Network Benchmark
       run: |
-        gh workflow run "Israel Network Benchmark" || echo "Failed to trigger Israel workflow"
+        gh workflow run "East US Network Benchmark" || echo "Failed to trigger eastus workflow"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 60
+      run: sleep 10
 
-    - name: Trigger Japan Region Workflow
+    - name: Trigger East US 2 Network Benchmark
       run: |
-        gh workflow run "Japan Network Benchmark" || echo "Failed to trigger Japan workflow"
+        gh workflow run "East US 2 Network Benchmark" || echo "Failed to trigger eastus2 workflow"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 60
+      run: sleep 10
 
-    - name: Trigger Korea Region Workflow
+    - name: Trigger France Central Network Benchmark
       run: |
-        gh workflow run "Korea Network Benchmark" || echo "Failed to trigger Korea workflow"
+        gh workflow run "France Central Network Benchmark" || echo "Failed to trigger francecentral workflow"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 60
+      run: sleep 10
 
-    - name: Trigger Mediterranean Central Region Workflow
+    - name: Trigger Germany West Central Network Benchmark
       run: |
-        gh workflow run "Mediterranean Central Network Benchmark" || echo "Failed to trigger Mediterranean Central workflow"
+        gh workflow run "Germany West Central Network Benchmark" || echo "Failed to trigger germanywestcentral workflow"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 60
+      run: sleep 10
 
-    - name: Trigger Mexico Region Workflow
+    - name: Trigger Indonesia Central Network Benchmark
       run: |
-        gh workflow run "Mexico Network Benchmark" || echo "Failed to trigger Mexico workflow"
+        gh workflow run "Indonesia Central Network Benchmark" || echo "Failed to trigger indonesiacentral workflow"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 60
+      run: sleep 10
 
-    - name: Trigger Middle East Gulf Region Workflow
+    - name: Trigger Israel Central Network Benchmark
       run: |
-        gh workflow run "Middle East Gulf Network Benchmark" || echo "Failed to trigger Middle East Gulf workflow"
+        gh workflow run "Israel Central Network Benchmark" || echo "Failed to trigger israelcentral workflow"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 60
+      run: sleep 10
 
-    - name: Trigger Nordic Alpine Region Workflow
+    - name: Trigger Italy North Network Benchmark
       run: |
-        gh workflow run "Nordic Alpine Network Benchmark" || echo "Failed to trigger Nordic Alpine workflow"
+        gh workflow run "Italy North Network Benchmark" || echo "Failed to trigger italynorth workflow"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 60
+      run: sleep 10
 
-    - name: Trigger Oceania Region Workflow
+    - name: Trigger Japan East Network Benchmark
       run: |
-        gh workflow run "Oceania Network Benchmark" || echo "Failed to trigger Oceania workflow"
+        gh workflow run "Japan East Network Benchmark" || echo "Failed to trigger japaneast workflow"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 60
+      run: sleep 10
 
-    - name: Trigger South America Region Workflow
+    - name: Trigger Japan West Network Benchmark
       run: |
-        gh workflow run "South America Network Benchmark" || echo "Failed to trigger South America workflow"
+        gh workflow run "Japan West Network Benchmark" || echo "Failed to trigger japanwest workflow"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 60
+      run: sleep 10
 
-    - name: Trigger US Central Region Workflow
+    - name: Trigger Korea Central Network Benchmark
       run: |
-        gh workflow run "US Central Network Benchmark" || echo "Failed to trigger US Central workflow"
+        gh workflow run "Korea Central Network Benchmark" || echo "Failed to trigger koreacentral workflow"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 60
+      run: sleep 10
 
-    - name: Trigger US East Region Workflow
+    - name: Trigger Malaysia West Network Benchmark
       run: |
-        gh workflow run "US East Network Benchmark" || echo "Failed to trigger US East workflow"
+        gh workflow run "Malaysia West Network Benchmark" || echo "Failed to trigger malaysiawest workflow"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 60
+      run: sleep 10
 
-    - name: Trigger US West Region Workflow
+    - name: Trigger Mexico Central Network Benchmark
       run: |
-        gh workflow run "US West Network Benchmark" || echo "Failed to trigger US West workflow"
+        gh workflow run "Mexico Central Network Benchmark" || echo "Failed to trigger mexicocentral workflow"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 60
+      run: sleep 10
 
-    - name: Trigger Western Europe Region Workflow
+    - name: Trigger New Zealand North Network Benchmark
       run: |
-        gh workflow run "Western Europe Network Benchmark" || echo "Failed to trigger Western Europe workflow"
+        gh workflow run "New Zealand North Network Benchmark" || echo "Failed to trigger newzealandnorth workflow"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Wait before next trigger
+      run: sleep 10
+
+    - name: Trigger North Europe Network Benchmark
+      run: |
+        gh workflow run "North Europe Network Benchmark" || echo "Failed to trigger northeurope workflow"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Wait before next trigger
+      run: sleep 10
+
+    - name: Trigger Norway East Network Benchmark
+      run: |
+        gh workflow run "Norway East Network Benchmark" || echo "Failed to trigger norwayeast workflow"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Wait before next trigger
+      run: sleep 10
+
+    - name: Trigger Poland Central Network Benchmark
+      run: |
+        gh workflow run "Poland Central Network Benchmark" || echo "Failed to trigger polandcentral workflow"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Wait before next trigger
+      run: sleep 10
+
+    - name: Trigger Qatar Central Network Benchmark
+      run: |
+        gh workflow run "Qatar Central Network Benchmark" || echo "Failed to trigger qatarcentral workflow"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Wait before next trigger
+      run: sleep 10
+
+    - name: Trigger South Africa North Network Benchmark
+      run: |
+        gh workflow run "South Africa North Network Benchmark" || echo "Failed to trigger southafricanorth workflow"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Wait before next trigger
+      run: sleep 10
+
+    - name: Trigger South Central US Network Benchmark
+      run: |
+        gh workflow run "South Central US Network Benchmark" || echo "Failed to trigger southcentralus workflow"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Wait before next trigger
+      run: sleep 10
+
+    - name: Trigger Southeast Asia Network Benchmark
+      run: |
+        gh workflow run "Southeast Asia Network Benchmark" || echo "Failed to trigger southeastasia workflow"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Wait before next trigger
+      run: sleep 10
+
+    - name: Trigger Spain Central Network Benchmark
+      run: |
+        gh workflow run "Spain Central Network Benchmark" || echo "Failed to trigger spaincentral workflow"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Wait before next trigger
+      run: sleep 10
+
+    - name: Trigger Sweden Central Network Benchmark
+      run: |
+        gh workflow run "Sweden Central Network Benchmark" || echo "Failed to trigger swedencentral workflow"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Wait before next trigger
+      run: sleep 10
+
+    - name: Trigger Switzerland North Network Benchmark
+      run: |
+        gh workflow run "Switzerland North Network Benchmark" || echo "Failed to trigger switzerlandnorth workflow"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Wait before next trigger
+      run: sleep 10
+
+    - name: Trigger UAE North Network Benchmark
+      run: |
+        gh workflow run "UAE North Network Benchmark" || echo "Failed to trigger uaenorth workflow"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Wait before next trigger
+      run: sleep 10
+
+    - name: Trigger UK South Network Benchmark
+      run: |
+        gh workflow run "UK South Network Benchmark" || echo "Failed to trigger uksouth workflow"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Wait before next trigger
+      run: sleep 10
+
+    - name: Trigger West Europe Network Benchmark
+      run: |
+        gh workflow run "West Europe Network Benchmark" || echo "Failed to trigger westeurope workflow"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Wait before next trigger
+      run: sleep 10
+
+    - name: Trigger West US 2 Network Benchmark
+      run: |
+        gh workflow run "West US 2 Network Benchmark" || echo "Failed to trigger westus2 workflow"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Wait before next trigger
+      run: sleep 10
+
+    - name: Trigger West US 3 Network Benchmark
+      run: |
+        gh workflow run "West US 3 Network Benchmark" || echo "Failed to trigger westus3 workflow"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Wait before next trigger
+      run: sleep 10
 
