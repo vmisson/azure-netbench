@@ -24,7 +24,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger Austria East Network Benchmark
       run: |
@@ -33,7 +33,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger Brazil South Network Benchmark
       run: |
@@ -42,7 +42,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger Canada Central Network Benchmark
       run: |
@@ -51,7 +51,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger Central India Network Benchmark
       run: |
@@ -60,7 +60,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger Central US Network Benchmark
       run: |
@@ -69,7 +69,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger Chile Central Network Benchmark
       run: |
@@ -78,7 +78,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger East Asia Network Benchmark
       run: |
@@ -87,7 +87,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger East US Network Benchmark
       run: |
@@ -96,7 +96,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger East US 2 Network Benchmark
       run: |
@@ -105,7 +105,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger France Central Network Benchmark
       run: |
@@ -114,7 +114,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger Germany West Central Network Benchmark
       run: |
@@ -123,7 +123,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger Indonesia Central Network Benchmark
       run: |
@@ -132,7 +132,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger Israel Central Network Benchmark
       run: |
@@ -141,7 +141,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger Italy North Network Benchmark
       run: |
@@ -150,7 +150,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger Japan East Network Benchmark
       run: |
@@ -159,7 +159,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger Japan West Network Benchmark
       run: |
@@ -168,7 +168,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger Korea Central Network Benchmark
       run: |
@@ -177,7 +177,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger Malaysia West Network Benchmark
       run: |
@@ -186,7 +186,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger Mexico Central Network Benchmark
       run: |
@@ -195,7 +195,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger New Zealand North Network Benchmark
       run: |
@@ -204,7 +204,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger North Europe Network Benchmark
       run: |
@@ -213,7 +213,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger Norway East Network Benchmark
       run: |
@@ -222,7 +222,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger Poland Central Network Benchmark
       run: |
@@ -231,7 +231,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger Qatar Central Network Benchmark
       run: |
@@ -240,7 +240,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger South Africa North Network Benchmark
       run: |
@@ -249,7 +249,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger South Central US Network Benchmark
       run: |
@@ -258,7 +258,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger Southeast Asia Network Benchmark
       run: |
@@ -267,7 +267,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger Spain Central Network Benchmark
       run: |
@@ -276,7 +276,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger Sweden Central Network Benchmark
       run: |
@@ -285,7 +285,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger Switzerland North Network Benchmark
       run: |
@@ -294,7 +294,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger UAE North Network Benchmark
       run: |
@@ -303,7 +303,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger UK South Network Benchmark
       run: |
@@ -312,7 +312,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger West Europe Network Benchmark
       run: |
@@ -321,7 +321,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger West US 2 Network Benchmark
       run: |
@@ -330,7 +330,7 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 
     - name: Trigger West US 3 Network Benchmark
       run: |
@@ -339,5 +339,5 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Wait before next trigger
-      run: sleep 10
+      run: sleep 30
 

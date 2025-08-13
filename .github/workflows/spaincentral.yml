@@ -102,6 +102,7 @@ jobs:
           -backend-config="storage_account_name=${{ secrets.TERRAFORM_STATE_SA }}" \
           -backend-config="container_name=${{ secrets.TERRAFORM_STATE_CONTAINER }}" \
           -backend-config="key=spaincentral.tfstate"
+      continue-on-error: true
 
     - name: Get Resource Group Name
       id: get_rg_name
