@@ -1,3 +1,3 @@
 benchmark = {
-  "brazilsouth" = "Standard_D8als_v6"
+  "brazilsouth" = "Standard_D8als_v5"
 }
