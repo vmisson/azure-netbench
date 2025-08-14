@@ -1,3 +1,3 @@
 benchmark = {
-  "southcentralus" = "Standard_D8ls_v6"
+  "southcentralus" = "Standard_D4ahs_v4"
 }
