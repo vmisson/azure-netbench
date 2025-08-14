@@ -89,15 +89,6 @@ jobs:
     - name: Wait before next trigger
       run: sleep 30
 
-    - name: Trigger East US Network Benchmark
-      run: |
-        gh workflow run "East US Network Benchmark" || echo "Failed to trigger eastus workflow"
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Wait before next trigger
-      run: sleep 30
-
     - name: Trigger East US 2 Network Benchmark
       run: |
         gh workflow run "East US 2 Network Benchmark" || echo "Failed to trigger eastus2 workflow"
@@ -227,15 +218,6 @@ jobs:
     - name: Trigger Poland Central Network Benchmark
       run: |
         gh workflow run "Poland Central Network Benchmark" || echo "Failed to trigger polandcentral workflow"
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Wait before next trigger
-      run: sleep 30
-
-    - name: Trigger Qatar Central Network Benchmark
-      run: |
-        gh workflow run "Qatar Central Network Benchmark" || echo "Failed to trigger qatarcentral workflow"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
