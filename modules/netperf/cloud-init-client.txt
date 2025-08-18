@@ -15,16 +15,16 @@ runcmd:
   - uuid=$(uuidgen)
   - bw=$(grep -o '[0-9.]\+ Gb/sec' az1_bw.txt)
   - lat=$(grep -o '[0-9.]\+ us' az1_lat.txt)
-  - 'curl -X POST "https://sanetprdfrc001.table.core.windows.net/perf" -H "Authorization: Bearer $access_token" -H "x-ms-version: 2020-04-08" -H "Accept: application/json;odata=nometadata" -H "Content-Type: application/json" -d "{\"PartitionKey\":\"$uuid\",\"RowKey\":\"$region\", \"Source\":\"$source\", \"Destination\":\"az1\", \"Bandwidth\":\"$bw\", \"Latency\":\"$lat\"}"'
+  - [ "$lat" != "0 us" ] && 'curl -X POST "https://sanetprdfrc001.table.core.windows.net/perf" -H "Authorization: Bearer $access_token" -H "x-ms-version: 2020-04-08" -H "Accept: application/json;odata=nometadata" -H "Content-Type: application/json" -d "{\"PartitionKey\":\"$uuid\",\"RowKey\":\"$region\", \"Source\":\"$source\", \"Destination\":\"az1\", \"Bandwidth\":\"$bw\", \"Latency\":\"$lat\"}"'
   - qperf lx-srv-$region-az2 -ub -t 10 tcp_bw > az2_bw.txt
   - qperf lx-srv-$region-az2 tcp_lat > az2_lat.txt
   - uuid=$(uuidgen)
   - bw=$(grep -o '[0-9.]\+ Gb/sec' az2_bw.txt)
   - lat=$(grep -o '[0-9.]\+ us' az2_lat.txt)
-  - 'curl -X POST "https://sanetprdfrc001.table.core.windows.net/perf" -H "Authorization: Bearer $access_token" -H "x-ms-version: 2020-04-08" -H "Accept: application/json;odata=nometadata" -H "Content-Type: application/json" -d "{\"PartitionKey\":\"$uuid\",\"RowKey\":\"$region\", \"Source\":\"$source\", \"Destination\":\"az2\", \"Bandwidth\":\"$bw\", \"Latency\":\"$lat\"}"'
+  - [ "$lat" != "0 us" ] && 'curl -X POST "https://sanetprdfrc001.table.core.windows.net/perf" -H "Authorization: Bearer $access_token" -H "x-ms-version: 2020-04-08" -H "Accept: application/json;odata=nometadata" -H "Content-Type: application/json" -d "{\"PartitionKey\":\"$uuid\",\"RowKey\":\"$region\", \"Source\":\"$source\", \"Destination\":\"az2\", \"Bandwidth\":\"$bw\", \"Latency\":\"$lat\"}"'
   - qperf lx-srv-$region-az3 -ub -t 10 tcp_bw > az3_bw.txt
   - qperf lx-srv-$region-az3 tcp_lat > az3_lat.txt
   - uuid=$(uuidgen)
   - bw=$(grep -o '[0-9.]\+ Gb/sec' az3_bw.txt)
   - lat=$(grep -o '[0-9.]\+ us' az3_lat.txt)
-  - 'curl -X POST "https://sanetprdfrc001.table.core.windows.net/perf" -H "Authorization: Bearer $access_token" -H "x-ms-version: 2020-04-08" -H "Accept: application/json;odata=nometadata" -H "Content-Type: application/json" -d "{\"PartitionKey\":\"$uuid\",\"RowKey\":\"$region\", \"Source\":\"$source\", \"Destination\":\"az3\", \"Bandwidth\":\"$bw\", \"Latency\":\"$lat\"}"'
+  - [ "$lat" != "0 us" ] && 'curl -X POST "https://sanetprdfrc001.table.core.windows.net/perf" -H "Authorization: Bearer $access_token" -H "x-ms-version: 2020-04-08" -H "Accept: application/json;odata=nometadata" -H "Content-Type: application/json" -d "{\"PartitionKey\":\"$uuid\",\"RowKey\":\"$region\", \"Source\":\"$source\", \"Destination\":\"az3\", \"Bandwidth\":\"$bw\", \"Latency\":\"$lat\"}"'
