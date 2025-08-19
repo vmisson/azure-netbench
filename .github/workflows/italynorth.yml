@@ -62,7 +62,7 @@ jobs:
 
     - name: Wait for benchmark completion
       if: steps.apply.outcome == 'success'
-      run: sleep 300  # Wait 5 minutes for benchmark to complete
+      run: sleep 60  # Wait 1 minute for benchmark to complete
 
   destroy:
     name: Destroy Infrastructure - Italy North
