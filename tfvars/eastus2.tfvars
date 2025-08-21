@@ -1,3 +1,3 @@
 benchmark = {
-  "eastus2" = "Standard_D8als_v6"
+  "eastus2" = "Standard_D4als_v6"
 }

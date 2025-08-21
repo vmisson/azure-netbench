@@ -1,3 +1,3 @@
 benchmark = {
-  "uaenorth" = "Standard_D8ads_v5"
+  "uaenorth" = "Standard_D4ads_v5"
 }

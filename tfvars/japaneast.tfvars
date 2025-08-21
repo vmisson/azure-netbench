@@ -1,3 +1,3 @@
 benchmark = {
-  "japaneast" = "Standard_D8ads_v5"
+  "japaneast" = "Standard_D4ads_v5"
 }

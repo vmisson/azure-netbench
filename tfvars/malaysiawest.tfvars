@@ -1,3 +1,3 @@
 benchmark = {
-  "malaysiawest" = "Standard_D8ads_v6"
+  "malaysiawest" = "Standard_D4ads_v6"
 }

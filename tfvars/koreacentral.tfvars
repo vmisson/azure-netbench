@@ -1,3 +1,3 @@
 benchmark = {
-  "koreacentral" = "Standard_D8ads_v5"
+  "koreacentral" = "Standard_D4ads_v5"
 }

@@ -1,3 +1,3 @@
 benchmark = {
-  "mexicocentral" = "Standard_D8ls_v5"
+  "mexicocentral" = "Standard_D4ls_v5"
 }

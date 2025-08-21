@@ -1,3 +1,3 @@
 benchmark = {
-  "israelcentral" = "Standard_D8ds_v5"
+  "israelcentral" = "Standard_D4ds_v5"
 }

@@ -17,6 +17,12 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Trigger WebApp workflow
+      run: |
+        gh workflow run "WebApp workflow" || echo "Failed to trigger WebApp workflow"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
     - name: Trigger Australia East Network Benchmark
       run: |
         gh workflow run "Australia East Network Benchmark" || echo "Failed to trigger australiaeast workflow"
