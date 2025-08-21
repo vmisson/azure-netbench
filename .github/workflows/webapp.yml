@@ -1,0 +1,25 @@
+name: WebApp workflow
+
+on:
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  maintenance:
+    name: Maintenance WebApp
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
+
+    - name: Open Storage Account Firewall
+      run: |
+        az storage account update \
+          --resource-group "${{ secrets.WEBAPP_RG }}" \
+          --name "${{ secrets.WEBAPP_SA }}" \
+          --public-network-access Enabled \
+          --default-action Allow \
+          --allow-shared-key-access true
+
