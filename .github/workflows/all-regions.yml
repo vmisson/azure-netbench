@@ -50,6 +50,15 @@ jobs:
     - name: Wait before next trigger
       run: sleep 30
 
+    - name: Trigger Belgium Central Network Benchmark
+      run: |
+        gh workflow run "Belgium Central Network Benchmark" || echo "Failed to trigger belgiumcentral workflow"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Wait before next trigger
+      run: sleep 30
+
     - name: Trigger Canada Central Network Benchmark
       run: |
         gh workflow run "Canada Central Network Benchmark" || echo "Failed to trigger canadacentral workflow"

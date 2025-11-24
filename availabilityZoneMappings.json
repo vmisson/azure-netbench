@@ -39,24 +39,6 @@
     "availabilityZoneMappings": [
       {
         "logicalZone": "1",
-        "physicalZone": "westus3-az3"
-      },
-      {
-        "logicalZone": "2",
-        "physicalZone": "westus3-az2"
-      },
-      {
-        "logicalZone": "3",
-        "physicalZone": "westus3-az1"
-      }
-    ],
-    "displayName": "West US 3",
-    "name": "westus3"
-  },
-  {
-    "availabilityZoneMappings": [
-      {
-        "logicalZone": "1",
         "physicalZone": "australiaeast-az3"
       },
       {
@@ -129,24 +111,6 @@
     "availabilityZoneMappings": [
       {
         "logicalZone": "1",
-        "physicalZone": "uksouth-az3"
-      },
-      {
-        "logicalZone": "2",
-        "physicalZone": "uksouth-az2"
-      },
-      {
-        "logicalZone": "3",
-        "physicalZone": "uksouth-az1"
-      }
-    ],
-    "displayName": "UK South",
-    "name": "uksouth"
-  },
-  {
-    "availabilityZoneMappings": [
-      {
-        "logicalZone": "1",
         "physicalZone": "westeurope-az3"
       },
       {
@@ -160,6 +124,24 @@
     ],
     "displayName": "West Europe",
     "name": "westeurope"
+  },
+  {
+    "availabilityZoneMappings": [
+      {
+        "logicalZone": "1",
+        "physicalZone": "uksouth-az3"
+      },
+      {
+        "logicalZone": "2",
+        "physicalZone": "uksouth-az2"
+      },
+      {
+        "logicalZone": "3",
+        "physicalZone": "uksouth-az1"
+      }
+    ],
+    "displayName": "UK South",
+    "name": "uksouth"
   },
   {
     "availabilityZoneMappings": [
@@ -376,6 +358,24 @@
     ],
     "displayName": "Austria East",
     "name": "austriaeast"
+  },
+  {
+    "availabilityZoneMappings": [
+      {
+        "logicalZone": "1",
+        "physicalZone": "belgiumcentral-az3"
+      },
+      {
+        "logicalZone": "2",
+        "physicalZone": "belgiumcentral-az2"
+      },
+      {
+        "logicalZone": "3",
+        "physicalZone": "belgiumcentral-az1"
+      }
+    ],
+    "displayName": "Belgium Central",
+    "name": "belgiumcentral"
   },
   {
     "availabilityZoneMappings": [
@@ -668,5 +668,23 @@
     ],
     "displayName": "South Central US",
     "name": "southcentralus"
+  },
+  {
+    "availabilityZoneMappings": [
+      {
+        "logicalZone": "1",
+        "physicalZone": "westus3-az3"
+      },
+      {
+        "logicalZone": "2",
+        "physicalZone": "westus3-az2"
+      },
+      {
+        "logicalZone": "3",
+        "physicalZone": "westus3-az1"
+      }
+    ],
+    "displayName": "West US 3",
+    "name": "westus3"
   }
 ]
