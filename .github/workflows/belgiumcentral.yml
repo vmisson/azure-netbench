@@ -1,0 +1,124 @@
+name: Belgium Central Network Benchmark
+
+on:
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  TF_VAR_storage_account_name: ${{ secrets.TERRAFORM_STATE_SA }}
+  TF_VAR_storage_account_resource_group: ${{ secrets.TERRAFORM_STATE_RG }}
+  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+jobs:
+  deploy:
+    name: Deploy Infrastructure - Belgium Central
+    runs-on: ubuntu-latest
+    outputs:
+      terraform_status: ${{ steps.apply.outcome }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ~1.5
+
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
+
+    - name: Open Storage Account Firewall
+      run: |
+        az storage account update \
+          --resource-group "${{ secrets.TERRAFORM_STATE_RG }}" \
+          --name "${{ secrets.TERRAFORM_STATE_SA }}" \
+          --public-network-access Enabled \
+          --default-action Allow
+        # Wait a moment for the rule to take effect
+        sleep 30
+
+    - name: Terraform Init
+      run: |
+        terraform init \
+          -backend-config="subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
+          -backend-config="resource_group_name=${{ secrets.TERRAFORM_STATE_RG }}" \
+          -backend-config="storage_account_name=${{ secrets.TERRAFORM_STATE_SA }}" \
+          -backend-config="container_name=${{ secrets.TERRAFORM_STATE_CONTAINER }}" \
+          -backend-config="key=belgiumcentral.tfstate"
+
+    - name: Terraform Plan
+      run: terraform plan -var-file="tfvars/belgiumcentral.tfvars" -out=tfplan
+
+    - name: Terraform Apply
+      id: apply
+      run: terraform apply -auto-approve tfplan
+      continue-on-error: true
+
+    - name: Wait for benchmark completion
+      if: steps.apply.outcome == 'success'
+      run: sleep 60  # Wait 1 minute for benchmark to complete
+
+  destroy:
+    name: Destroy Infrastructure - Belgium Central
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: always()  # Run destroy even if deploy fails
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ~1.5
+
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
+
+    - name: Open Storage Account Firewall
+      run: |
+        az storage account update \
+          --resource-group "${{ secrets.TERRAFORM_STATE_RG }}" \
+          --name "${{ secrets.TERRAFORM_STATE_SA }}" \
+          --public-network-access Enabled \
+          --default-action Allow
+        # Wait a moment for the rule to take effect
+        sleep 30
+
+    - name: Terraform Init
+      run: |
+        terraform init \
+          -backend-config="subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
+          -backend-config="resource_group_name=${{ secrets.TERRAFORM_STATE_RG }}" \
+          -backend-config="storage_account_name=${{ secrets.TERRAFORM_STATE_SA }}" \
+          -backend-config="container_name=${{ secrets.TERRAFORM_STATE_CONTAINER }}" \
+          -backend-config="key=belgiumcentral.tfstate"
+      continue-on-error: true
+
+    - name: Get Resource Group Name
+      id: get_rg_name
+      run: |
+        RG_NAME=$(terraform output -raw resource_group_name 2>/dev/null || echo "")
+        echo "rg_name=$RG_NAME" >> $GITHUB_OUTPUT
+        echo "Resource Group Name: $RG_NAME"
+      continue-on-error: true
+
+    - name: Terraform Destroy
+      run: terraform destroy -auto-approve -var-file="tfvars/belgiumcentral.tfvars"
+      continue-on-error: true
+
+    - name: Force delete Resource Group (if needed)
+      if: always() && steps.get_rg_name.outputs.rg_name != ''
+      run: |
+        echo "Force deleting resource group: ${{ steps.get_rg_name.outputs.rg_name }}"
+        az group delete --name "${{ steps.get_rg_name.outputs.rg_name }}" --yes --no-wait || true
+        echo "Resource group deletion command executed (may take time to complete)"

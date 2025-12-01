@@ -3,6 +3,8 @@
 A comprehensive platform for testing and analyzing network performance between Azure Availability Zones across different regions worldwide.  
 Current deployment: https://latency.azure.cloud63.fr/
 
+> **⚠️ Disclaimer**: This is an **unofficial** community tool, not affiliated with Microsoft Azure. The results are provided on a **best-effort basis** for informational purposes only. Use at your own risk and always conduct your own performance testing for production workloads.
+
 ## 🎯 Purpose
 
 This project automatically measures network latency and bandwidth between Azure Availability Zones across 25+ global regions. It provides valuable insights into Azure's internal network performance to optimize multi-zone application deployments.
