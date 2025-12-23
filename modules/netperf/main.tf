@@ -42,6 +42,7 @@ module "linux_virtual_machine_server" {
   resource_group_name           = module.resource_group.name
   subnet_id                     = module.subnet.id
   size                          = var.size
+  priority                      = "Spot"
   zone                          = lookup(local.locationMappings[var.location], "az${count.index + 1}")
   custom_data                   = base64encode(file("${path.module}/cloud-init-server.txt"))
   enable_accelerated_networking = true
@@ -60,6 +61,7 @@ module "linux_virtual_machine_client_1" {
   resource_group_name           = module.resource_group.name
   subnet_id                     = module.subnet.id
   size                          = var.size
+  priority                      = "Spot"  
   zone                          = lookup(local.locationMappings[var.location], "az1")
   custom_data                   = base64encode(file("${path.module}/cloud-init-client.txt"))
   enable_accelerated_networking = true
@@ -88,6 +90,7 @@ module "linux_virtual_machine_client_2" {
   resource_group_name           = module.resource_group.name
   subnet_id                     = module.subnet.id
   size                          = var.size
+  priority                      = "Spot"  
   zone                          = lookup(local.locationMappings[var.location], "az2")
   custom_data                   = base64encode(file("${path.module}/cloud-init-client.txt"))
   enable_accelerated_networking = true
@@ -116,6 +119,7 @@ module "linux_virtual_machine_client_3" {
   resource_group_name           = module.resource_group.name
   subnet_id                     = module.subnet.id
   size                          = var.size
+  priority                      = "Spot"  
   zone                          = lookup(local.locationMappings[var.location], "az3")
   custom_data                   = base64encode(file("${path.module}/cloud-init-client.txt"))
   enable_accelerated_networking = true
