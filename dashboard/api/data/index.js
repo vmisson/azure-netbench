@@ -8,7 +8,7 @@ module.exports = async function (context, req) {
         // Configuration - utilisez vos vraies valeurs
         const storageAccountName = process.env.AZURE_STORAGE_ACCOUNT_NAME || 'sanetprdfrc001';
         const tableName = process.env.AZURE_STORAGE_TABLE_NAME || 'perf';
-        const maxResults = parseInt(process.env.MAX_RESULTS || '100000'); // Limite configurable, défaut 100000
+        const maxResults = parseInt(process.env.MAX_RESULTS || '200000'); // Limite configurable, défaut 200000
         
         context.log(`Connecting to storage account: ${storageAccountName}, table: ${tableName}, max results: ${maxResults}`);
         

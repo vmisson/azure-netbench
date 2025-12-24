@@ -792,10 +792,10 @@ class NetworkBenchmarkDashboard {
             : 0;
         document.getElementById('avgLatency').textContent = `${avgLatency} μs`;
         
-        // Abnormal results count (intra-zone > 500 μs, inter-zone > 2000 μs)
+        // Abnormal results count for TCP one-way tests (intra-zone > 500 μs, inter-zone > 1000 μs)
         const abnormalCount = data.filter(item => {
             const isIntraZone = item.source === item.destination;
-            return isIntraZone ? item.latency > 500 : item.latency > 2000;
+            return isIntraZone ? item.latency > 500 : item.latency > 1000;
         }).length;
         document.getElementById('abnormalCount').textContent = abnormalCount;
     }
@@ -829,13 +829,13 @@ class NetworkBenchmarkDashboard {
         
         tbody.innerHTML = '';
         
-        // Filter for abnormal results:
+        // Filter for abnormal results (TCP one-way tests):
         // - Intra-zone (same source/destination): latency > 500 μs
-        // - Inter-zone (different source/destination): latency > 2000 μs
+        // - Inter-zone (different source/destination): latency > 1000 μs
         const abnormalResults = this.filteredData
             .filter(item => {
                 const isIntraZone = item.source === item.destination;
-                return isIntraZone ? item.latency > 500 : item.latency > 2000;
+                return isIntraZone ? item.latency > 500 : item.latency > 1000;
             })
             .sort((a, b) => b.timestamp - a.timestamp)
             .slice(0, 50); // Show up to 50 abnormal results
@@ -973,6 +973,7 @@ class NetworkBenchmarkDashboard {
             'taiwannorth': 'Taiwan North',
             'taiwannorthwest': 'Taiwan Northwest',
             'mexicocentral': 'Mexico Central',
+            'belgiumcentral': 'Belgium Central',
             
             // Common Azure region abbreviations
             'ea': 'East Asia',
@@ -1032,7 +1033,8 @@ class NetworkBenchmarkDashboard {
             'nwe': 'Norway East',
             'idc': 'Indonesia Central',
             'myw': 'Malaysia West',
-            'ilc': 'Israel Central', 
+            'ilc': 'Israel Central',
+            'bec': 'Belgium Central',
             
             // Availability zones
             'az1': 'Availability Zone 1',

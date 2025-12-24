@@ -40,7 +40,7 @@
         <div class="container">
             <a class="navbar-brand" href="#">
                 <i class="bi bi-speedometer2 me-2"></i>
-                Azure Network Internal Zone Latency Benchmark Dashboard
+                Azure Network Internal Zone One-Way Latency Benchmark Dashboard
             </a>
         </div>
     </nav>
@@ -95,7 +95,7 @@
                     <div class="card-body">
                         <div class="d-flex justify-content-between">
                             <div>
-                                <h6 class="card-title">Avg. Latency</h6>
+                                <h6 class="card-title">Avg. One-Way Latency</h6>
                                 <h3 id="avgLatency">0 μs</h3>
                             </div>
                             <div class="align-self-center">
@@ -252,7 +252,7 @@
             <div class="col-md-12">
                 <div class="card">
                     <div class="card-header bg-danger text-white">
-                        <h5><i class="bi bi-exclamation-triangle me-2"></i>Abnormal Results (Intra-zone Latency > 500 μs or Inter-zone Latency > 2000 μs)</h5>
+                        <h5><i class="bi bi-exclamation-triangle me-2"></i>Abnormal Results - TCP One-Way : Intra-zone Latency > 500 μs or Inter-zone Latency > 1000 μs</h5>
                     </div>
                     <div class="card-body">
                         <div class="alert alert-warning" id="noAbnormalResults" style="display: none;">
@@ -286,7 +286,7 @@
             <div class="col-md-12">
                 <div class="card">
                     <div class="card-header">
-                        <h5>Recent Test Results</h5>
+                        <h5>Recent Test Results TCP One-Way</h5>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
