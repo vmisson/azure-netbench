@@ -1,1149 +1,672 @@
+const COLORS = ['#087f8c', '#3777cf', '#d89524', '#d96068', '#668c3d', '#936d9d',
+    '#369ab4', '#d47d48', '#6868a4', '#4b9180', '#a69a39', '#a96886'];
+const numberFormat = new Intl.NumberFormat('en-GB', { maximumFractionDigits: 0 });
+const decimalFormat = new Intl.NumberFormat('en-GB', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const compactFormat = new Intl.NumberFormat('en-GB', { notation: 'compact', maximumFractionDigits: 1 });
+const timestampFormat = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
+const tooltipTimestampFormat = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
+const dayFormat = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', timeZone: 'UTC' });
+const hourFormat = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', timeZone: 'UTC' });
+const element = id => document.getElementById(id);
+const formatted = (value, decimal = false) => value === null || value === undefined ? '--' : (decimal ? decimalFormat : numberFormat).format(value);
+
+function setTimelineFocus(chart, datasetIndex, pointIndex = null) {
+    if (datasetIndex !== null && !chart.isDatasetVisible(datasetIndex)) datasetIndex = null;
+    if (datasetIndex === null) pointIndex = null;
+    const seriesChanged = (chart.$focusedDataset ?? null) !== datasetIndex;
+    const pointChanged = (chart.$focusedPoint ?? null) !== pointIndex;
+    chart.$focusedDataset = datasetIndex;
+    chart.$focusedPoint = pointIndex;
+    if (seriesChanged) {
+        const legend = chart.canvas.closest('.analysis-section')?.querySelector('.series-legend');
+        legend?.querySelectorAll('.legend-item').forEach((button, index) => {
+            button.classList.toggle('is-focused', index === datasetIndex);
+            button.classList.toggle('is-muted', datasetIndex !== null && index !== datasetIndex);
+        });
+    }
+    return seriesChanged || pointChanged;
+}
+
+const timelineFocusPlugin = {
+    id: 'timelineFocus',
+    afterEvent(chart, args) {
+        const active = args.inChartArea && args.event.type !== 'mouseout' ? chart.getActiveElements()[0] : null;
+        if (setTimelineFocus(chart, active?.datasetIndex ?? null, active?.index ?? null)) args.changed = true;
+    },
+    beforeDatasetsDraw(chart) {
+        if (chart.$focusedDataset == null || !chart.isDatasetVisible(chart.$focusedDataset)) return;
+        chart.ctx.save();
+        chart.ctx.globalAlpha *= 0.16;
+    },
+    afterDatasetsDraw(chart) {
+        if (chart.$focusedDataset == null || !chart.isDatasetVisible(chart.$focusedDataset)) return;
+        const context = chart.ctx;
+        context.restore();
+        const meta = chart.getDatasetMeta(chart.$focusedDataset);
+        const originalOptions = meta.dataset.options;
+        const point = chart.$focusedPoint === null ? null : meta.data[chart.$focusedPoint];
+        const area = chart.chartArea;
+        context.save();
+        context.beginPath();
+        context.rect(area.left, area.top, area.width, area.height);
+        context.clip();
+        try {
+            if (point) {
+                context.strokeStyle = '#64798c';
+                context.lineWidth = 1;
+                context.setLineDash([4, 4]);
+                context.beginPath();
+                context.moveTo(point.x, area.top);
+                context.lineTo(point.x, area.bottom);
+                context.stroke();
+                context.setLineDash([]);
+            }
+            meta.dataset.options = { ...originalOptions, borderWidth: 4 };
+            meta.controller.draw();
+            if (point) {
+                context.beginPath();
+                context.arc(point.x, point.y, 6, 0, Math.PI * 2);
+                context.fillStyle = chart.data.datasets[chart.$focusedDataset].borderColor;
+                context.fill();
+                context.lineWidth = 2;
+                context.strokeStyle = '#ffffff';
+                context.stroke();
+            }
+        } finally {
+            meta.dataset.options = originalOptions;
+            context.restore();
+        }
+    }
+};
+
 class NetworkBenchmarkDashboard {
     constructor() {
-        this.data = [];
-        this.filteredData = [];
+        const params = new URLSearchParams(window.location.search);
+        const requestedRange = params.get('range') === '365d' ? 'all' : params.get('range');
+        const range = ['72h', '7d', '30d', '90d', 'all'].includes(requestedRange) ? requestedRange : '7d';
+        this.filters = { regions: [], sources: [], destinations: [], range, scope: 'all' };
+        this.demo = params.get('demo') === '1';
         this.charts = {};
+        this.hiddenSeries = { regions: new Set(), pairs: new Set() };
+        this.optionsKey = '';
+        this.regionNames = new Map();
+        this.latencySortOrder = 'alphabetical';
+        this.activeLoad = 0;
+        this.model = null;
+        this.resultTab = 'recent';
+        this.tablePage = 0;
         this.isLoading = false;
-        this.eventListenersSetup = false;
-        this.refreshInterval = null;
-        this.latencySortOrder = 'alphabetical'; // Default sort order
-        
-        this.init();
-    }
-
-    async init() {
-        try {
-            await this.loadData();
-            this.setupEventListeners();
-            this.renderDashboard();
-        } catch (error) {
-            this.showError('Error loading data: ' + error.message);
-        }
-    }
-
-    async loadData() {
-        // Prevent concurrent calls
-        if (this.isLoading) {
+        this.lastRefresh = 0;
+        element('timeFilter').value = range;
+        element('dataSource').value = this.demo ? 'demo' : 'live';
+        element('exportButton').setAttribute('aria-label', 'Export filtered results to CSV');
+        element('exportButton').title = 'Export filtered results to CSV';
+        this.setupEventListeners();
+        if (typeof Worker === 'undefined' || typeof Chart === 'undefined') {
+            this.showError('The chart library or Web Worker could not be loaded. Check your connection and reload the page.', false);
             return;
         }
-        
-        this.showLoading(true);
-        
-        try {
-            // Use real API to get data from Azure Table Storage
-            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                // For local development, use mock data
-                this.data = this.generateMockData();
-            } else {
-                try {
-                    // Real call to Azure Table Storage via Function App
-                    const apiUrl = 'https://fa-azure-network-benchmark.azurewebsites.net/api/data';
-                    console.log('Fetching data from API:', apiUrl);
-                    
-                    const response = await fetch(apiUrl);
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    
-                    const apiData = await response.json();
-                    console.log('API returned data:', apiData.length, 'records');
-                    
-                    if (apiData.length === 0) {
-                        console.warn('No data returned from API, using mock data as fallback');
-                        this.data = this.generateMockData();
-                    } else {
-                        this.data = apiData;
-                    }
-                } catch (apiError) {
-                    console.error('API call failed:', apiError.message);
-                    console.log('Using mock data as fallback');
-                    this.data = this.generateMockData();
-                    
-                    // Show a warning message
-                    this.showError(`Using test data - API unavailable: ${apiError.message}`);
-                }
-            }
-            
-            this.processData();
-            this.showLoading(false);
-            
-        } catch (error) {
-            this.showLoading(false);
-            throw error;
-        }
-    }
-
-    generateMockData() {
-        const regions = ['francecentral', 'westeurope', 'northeurope', 'centralus', 'eastasia'];
-        const sources = ['az1', 'az2', 'az3'];
-        const destinations = ['az1', 'az2', 'az3'];
-        const mockData = [];
-
-        // Generate data for the last 30 days
-        const now = new Date();
-        for (let days = 0; days < 30; days++) {
-            for (let hours = 0; hours < 24; hours += 6) { // Every 6 hours
-                regions.forEach(region => {
-                    sources.forEach(source => {
-                        destinations.forEach(destination => {
-                            // Include all cases, even when source === destination
-                            const timestamp = new Date(now);
-                            timestamp.setDate(timestamp.getDate() - days);
-                            timestamp.setHours(hours, 0, 0, 0);
-
-                            // Simulate variable performance based on distance
-                            const isSameAZ = source === destination;
-                            const baseBandwidth = isSameAZ ? 25 : Math.random() * 20 + 5;
-                            const baseLatency = isSameAZ ? 10 : Math.random() * 500 + 50;
-
-                            mockData.push({
-                                PartitionKey: `test-${Math.random().toString(36).substr(2, 9)}`,
-                                RowKey: region,
-                                Source: source,
-                                Destination: destination,
-                                Bandwidth: `${(baseBandwidth + (Math.random() - 0.5) * 5).toFixed(2)} Gb/sec`,
-                                Latency: `${Math.round(baseLatency + (Math.random() - 0.5) * 100)} us`,
-                                Timestamp: timestamp.toISOString()
-                            });
-                        });
-                    });
-                });
-            }
-        }
-
-        return mockData;
-    }
-
-    processData() {
-        console.log('Processing data:', this.data.length, 'items');
-        console.log('Sample raw data:', this.data.slice(0, 2));
-        
-        // Convert raw data to internal format
-        this.data = this.data.map(item => {
-            // Parse bandwidth - handle various formats
-            let bandwidth = 0;
-            if (typeof item.Bandwidth === 'string') {
-                const bwMatch = item.Bandwidth.match(/([\d.]+)/);
-                if (bwMatch) {
-                    bandwidth = parseFloat(bwMatch[1]);
-                    // Convert to Gbps if needed
-                    if (item.Bandwidth.toLowerCase().includes('mb')) {
-                        bandwidth = bandwidth / 1000;
-                    }
-                }
-            } else {
-                bandwidth = parseFloat(item.Bandwidth) || 0;
-            }
-
-            // Parse latency - handle various formats  
-            let latency = 0;
-            if (typeof item.Latency === 'string') {
-                const latMatch = item.Latency.match(/([\d.]+)/);
-                if (latMatch) {
-                    latency = parseFloat(latMatch[1]);
-                    // Convert to microseconds if needed
-                    if (item.Latency.toLowerCase().includes('ms')) {
-                        latency = latency * 1000;
-                    }
-                }
-            } else {
-                latency = parseFloat(item.Latency) || 0;
-            }
-
-            return {
-                timestamp: new Date(item.Timestamp),
-                region: item.RowKey || 'unknown',
-                source: item.Source || 'unknown',
-                destination: item.Destination || 'unknown',
-                bandwidth: bandwidth,
-                latency: latency,
-                raw: item // Keep raw data for debugging
-            };
-        });
-
-        console.log('Processed data sample:', this.data.slice(0, 2));
-        
-        this.populateFilters();
-        
-        // Apply initial filters
-        this.applyFilters();
+        Chart.defaults.font.family = "'Manrope', sans-serif";
+        Chart.defaults.font.size = 14;
+        Chart.defaults.color = '#334155';
+        Chart.defaults.animation = false;
+        this.worker = new Worker('data-worker.js');
+        this.worker.onmessage = event => this.handleWorkerMessage(event.data);
+        this.worker.onerror = () => this.showError('The data worker stopped unexpectedly. Reload the page to reconnect.', Boolean(this.model));
+        this.loadData();
+        this.refreshInterval = setInterval(() => {
+            if (!document.hidden && !this.demo && !this.isLoading) this.loadData();
+        }, 5 * 60 * 1000);
     }
 
     setupEventListeners() {
-        // Prevent multiple calls
-        if (this.eventListenersSetup) {
+        element('refreshButton').addEventListener('click', () => this.loadData());
+        element('retryButton').addEventListener('click', () => this.loadData());
+        element('demoButton').addEventListener('click', () => this.changeSource(true));
+        element('dataSource').addEventListener('change', event => this.changeSource(event.target.value === 'demo'));
+        element('exportButton').addEventListener('click', () => this.exportData());
+        element('clearFiltersButton').addEventListener('click', () => this.clearFilters());
+        element('emptyResetButton').addEventListener('click', () => this.clearFilters());
+        element('timeFilter').addEventListener('change', event => {
+            this.filters.range = event.target.value;
+            this.loadData();
+        });
+        const filterGroups = { regionFilter: 'regions', sourceFilter: 'sources', destinationFilter: 'destinations' };
+        for (const [id, key] of Object.entries(filterGroups)) {
+            element(id).addEventListener('change', () => {
+                this.filters[key] = [...element(id).querySelectorAll('input:checked')].map(input => input.value);
+                this.applyFilters();
+            });
+        }
+        document.querySelectorAll('[data-clear]').forEach(button => button.addEventListener('click', () => {
+            this.filters[button.dataset.clear] = [];
+            this.syncFilterControls();
+            this.applyFilters();
+        }));
+        element('regionSearch').addEventListener('input', event => {
+            const query = event.target.value.toLowerCase().trim();
+            element('regionFilter').querySelectorAll('label').forEach(label => {
+                label.hidden = !label.textContent.toLowerCase().includes(query) && !label.querySelector('input').value.includes(query);
+            });
+        });
+        document.querySelectorAll('[data-scope]').forEach(button => button.addEventListener('click', () => {
+            this.filters.scope = button.dataset.scope;
+            this.applyFilters();
+        }));
+        document.querySelectorAll('[data-sort]').forEach(button => button.addEventListener('click', () => this.sortLatencyChart(button.dataset.sort)));
+        element('allResultsTab').addEventListener('click', () => this.setResultTab('recent'));
+        element('abnormalResultsTab').addEventListener('click', () => this.setResultTab('abnormal'));
+        document.querySelector('.result-tabs').addEventListener('keydown', event => {
+            if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+            event.preventDefault();
+            const tab = event.key === 'Home' ? 'recent' : event.key === 'End' ? 'abnormal' : this.resultTab === 'recent' ? 'abnormal' : 'recent';
+            this.setResultTab(tab);
+            element(tab === 'recent' ? 'allResultsTab' : 'abnormalResultsTab').focus();
+        });
+        element('abnormalCard').addEventListener('click', () => {
+            this.setResultTab('abnormal');
+            element('results').scrollIntoView({ behavior: this.scrollBehavior() });
+        });
+        element('previousPage').addEventListener('click', () => { this.tablePage--; this.renderDataTable(); });
+        element('nextPage').addEventListener('click', () => { this.tablePage++; this.renderDataTable(); });
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && !this.demo && !this.isLoading && Date.now() - this.lastRefresh > 300000) this.loadData();
+        });
+        window.addEventListener('pagehide', event => {
+            if (!event.persisted) { this.worker?.terminate(); clearInterval(this.refreshInterval); }
+        });
+    }
+
+    scrollBehavior() {
+        return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth';
+    }
+
+    changeSource(demo) {
+        this.demo = demo;
+        element('dataSource').value = demo ? 'demo' : 'live';
+        this.loadData();
+    }
+
+    loadData() {
+        if (!this.worker) return;
+        this.activeLoad++;
+        this.loadStarted = performance.now();
+        this.lastRefresh = Date.now();
+        this.isLoading = true;
+        element('errorMessage').hidden = true;
+        element('dataNotice').hidden = true;
+        element('emptyState').hidden = true;
+        element('refreshButton').disabled = true;
+        element('exportButton').disabled = true;
+        element('loadingSpinner').hidden = false;
+        element('loadingText').textContent = this.demo ? 'Preparing demo measurements' : 'Fetching measurements from Azure Table Storage';
+        element('loadTiming').textContent = '';
+        element('main').setAttribute('aria-busy', 'true');
+        this.setConnection(this.demo ? 'demo' : 'loading', this.demo ? 'Demo data' : 'Updating');
+        const url = new URL(window.location.href);
+        if (this.demo) url.searchParams.set('demo', '1');
+        else url.searchParams.delete('demo');
+        if (this.filters.range !== '7d') url.searchParams.set('range', this.filters.range);
+        else url.searchParams.delete('range');
+        window.history.replaceState(null, '', url);
+        const local = ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname) ||
+            window.location.hostname.endsWith('.app.github.dev') || window.location.hostname.endsWith('.devtunnels.ms');
+        const endpoint = local ? '/api/data' : document.querySelector('meta[name="api-url"]').content;
+        this.worker.postMessage({ type: 'load', loadId: this.activeLoad, filters: this.filters, demo: this.demo, endpoint });
+    }
+
+    handleWorkerMessage(message) {
+        if (message.loadId !== this.activeLoad) return;
+        if (message.type === 'error') {
+            this.showError(message.message, message.hasData);
             return;
         }
-        
-        // Filters
-        ['regionFilter', 'sourceFilter', 'destinationFilter', 'timeFilter'].forEach(filterId => {
-            document.getElementById(filterId).addEventListener('change', () => this.applyFilters());
-        });
-
-        // Auto refresh every 5 minutes
-        if (this.refreshInterval) {
-            clearInterval(this.refreshInterval);
+        if (message.type === 'export') {
+            const url = URL.createObjectURL(new Blob(['\uFEFF', message.csv], { type: 'text/csv;charset=utf-8' }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `azure-netbench-${this.demo ? 'demo-' : ''}${this.filters.range}-${new Date().toISOString().slice(0, 10)}.csv`;
+            link.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            element('exportButton').disabled = false;
+            return;
         }
-        this.refreshInterval = setInterval(() => this.loadData(), 5 * 60 * 1000);
-        
-        this.eventListenersSetup = true;
+        if (message.type !== 'result') return;
+        const wasLoading = this.isLoading;
+        this.isLoading = message.loading;
+        this.model = message.model;
+        this.tablePage = 0;
+        this.populateFilters(message.options);
+        this.renderDashboard();
+        this.updateStatus(message);
+        if (wasLoading && !message.loading) element('loadTiming').textContent = `${((performance.now() - this.loadStarted) / 1000).toFixed(1)} s`;
+    }
+
+    updateStatus(message) {
+        element('main').setAttribute('aria-busy', String(message.loading));
+        element('loadingSpinner').hidden = !message.loading;
+        element('refreshButton').disabled = message.loading;
+        element('exportButton').disabled = message.loading || !this.model.summary.tests;
+        if (message.phase === 'demo') {
+            this.setConnection('demo', 'Demo data');
+            element('loadingText').textContent = 'Demo dataset';
+        } else if (message.stale || message.phase === 'cache') {
+            this.setConnection('cache', 'Cached data');
+            element('loadingText').textContent = message.loading ? 'Saved snapshot loaded. Checking for new measurements...' : 'Cached snapshot. Live data is currently unavailable.';
+        } else {
+            this.setConnection('live', 'Live data');
+            element('loadingText').textContent = 'Data up to date';
+        }
+        const fetchedAt = Date.parse(message.meta.fetchedAt);
+        element('lastUpdated').textContent = Number.isFinite(fetchedAt) ? `Snapshot ${timestampFormat.format(fetchedAt)} UTC` : 'Snapshot time unavailable';
+        const notices = [];
+        if (message.meta.truncated) notices.push(`Storage limit reached (${formatted(message.meta.received)} rows). Results are partial; reduce the time window.`);
+        else if (message.meta.legacy && !this.demo) notices.push('The deployed API does not report dataset completeness. Results may be partial.');
+        if (message.meta.skipped) notices.push(`${formatted(message.meta.skipped)} invalid measurements excluded.`);
+        if (message.stale && !message.loading) notices.push('This is a saved snapshot, not a live update.');
+        element('dataNoticeText').textContent = notices.join(' ');
+        element('dataNotice').hidden = !notices.length;
+        element('datasetInfo').textContent = `${formatted(message.meta.received)} rows loaded \u00b7 ${this.demo ? 'Demo dataset' : 'Azure Table Storage'} \u00b7 UTC`;
+        if (message.stale) element('healthLabel').textContent = 'Saved snapshot';
+        if (this.demo) element('healthLabel').textContent = `Demo \u00b7 ${formatted(this.model.summary.healthyPercent, true)}% within thresholds`;
+    }
+
+    setConnection(state, label) {
+        element('connectionStatus').dataset.state = state;
+        element('connectionText').textContent = label;
+    }
+
+    showError(message, hasData) {
+        this.isLoading = false;
+        element('main').setAttribute('aria-busy', 'false');
+        element('loadingSpinner').hidden = true;
+        element('refreshButton').disabled = false;
+        element('exportButton').disabled = !hasData || !this.model?.summary.tests;
+        element('errorTitle').textContent = hasData ? 'Live update unavailable' : 'Data unavailable';
+        element('errorText').textContent = hasData ? `${message} The saved snapshot remains visible.` : message;
+        element('errorMessage').hidden = false;
+        element('loadingText').textContent = hasData ? 'Cached snapshot; live update failed' : 'No live measurements loaded';
+        this.setConnection(hasData ? 'cache' : 'error', hasData ? 'Cached data' : 'Unavailable');
+        element('healthLabel').textContent = hasData ? 'Saved snapshot' : 'Data unavailable';
+        if (!hasData && this.model) {
+            this.model = { summary: { tests: 0, regions: 0, avgLatency: null, p95Latency: null, avgBandwidth: null, anomalies: 0, healthyPercent: null }, regions: [], pairs: [], recent: [], abnormal: [] };
+            this.renderDashboard();
+            element('emptyState').hidden = true;
+            element('healthLabel').textContent = 'Data unavailable';
+            element('lastUpdated').textContent = 'No snapshot loaded';
+            element('datasetInfo').textContent = 'No measurements loaded';
+        }
+    }
+
+    populateFilters(options) {
+        options.regions.forEach(region => this.regionNames.set(region.id, region.name));
+        const key = JSON.stringify(options);
+        if (key === this.optionsKey) {
+            this.syncFilterControls();
+            return;
+        }
+        this.optionsKey = key;
+        const groups = [
+            ['regionFilter', 'regions', options.regions],
+            ['sourceFilter', 'sources', options.sources.map(id => ({ id, name: id }))],
+            ['destinationFilter', 'destinations', options.destinations.map(id => ({ id, name: id }))]
+        ];
+        for (const [id, field, values] of groups) {
+            const choices = new Map(values.map(value => [value.id, value.name]));
+            this.filters[field].forEach(value => { if (!choices.has(value)) choices.set(value, this.regionNames.get(value) || value); });
+            const fragment = document.createDocumentFragment();
+            for (const [value, name] of choices) {
+                const label = document.createElement('label');
+                label.className = 'filter-option';
+                const input = document.createElement('input');
+                input.type = 'checkbox';
+                input.value = value;
+                input.checked = this.filters[field].includes(value);
+                label.append(input, document.createTextNode(name));
+                fragment.append(label);
+            }
+            element(id).replaceChildren(fragment);
+        }
+        element('regionSearch').dispatchEvent(new Event('input'));
+        this.syncFilterControls();
+    }
+
+    syncFilterControls() {
+        const groups = [['regionFilter', 'regions', 'regionFilterLabel', 'All regions'],
+            ['sourceFilter', 'sources', 'sourceFilterLabel', 'All zones'],
+            ['destinationFilter', 'destinations', 'destinationFilterLabel', 'All zones']];
+        for (const [id, field, labelId, empty] of groups) {
+            const values = this.filters[field];
+            element(id).querySelectorAll('input').forEach(input => { input.checked = values.includes(input.value); });
+            element(labelId).textContent = !values.length ? empty : values.length === 1 ? (field === 'regions' ? this.regionNames.get(values[0]) || values[0] : values[0]) : `${values.length} selected`;
+        }
+        document.querySelectorAll('[data-scope]').forEach(button => {
+            const active = button.dataset.scope === this.filters.scope;
+            button.classList.toggle('active', active);
+            button.setAttribute('aria-pressed', String(active));
+        });
+        element('selectionSummary').textContent = `${this.filters.regions.length ? `${this.filters.regions.length} selected regions` : 'All regions'} \u00b7 ${this.filters.scope === 'all' ? 'All AZ paths' : `${this.filters.scope === 'intra' ? 'Intra' : 'Inter'}-zone paths`}`;
+        element('timeFilter').value = this.filters.range;
     }
 
     applyFilters() {
-        const regionFilter = document.getElementById('regionFilter');
-        const sourceFilter = document.getElementById('sourceFilter');
-        const destinationFilter = document.getElementById('destinationFilter');
-        const timeFilter = document.getElementById('timeFilter').value;
-
-        // Get selected values for multiple selects
-        const selectedRegions = Array.from(regionFilter.selectedOptions).map(option => option.value);
-        const selectedSources = Array.from(sourceFilter.selectedOptions).map(option => option.value);
-        const selectedDestinations = Array.from(destinationFilter.selectedOptions).map(option => option.value);
-
-        let filtered = [...this.data];
-
-        // Filter by regions
-        if (selectedRegions.length > 0) {
-            filtered = filtered.filter(item => selectedRegions.includes(item.region));
-        }
-
-        // Filter by sources
-        if (selectedSources.length > 0) {
-            filtered = filtered.filter(item => selectedSources.includes(item.source));
-        }
-
-        // Filter by destinations
-        if (selectedDestinations.length > 0) {
-            filtered = filtered.filter(item => selectedDestinations.includes(item.destination));
-        }
-
-        // Filter by time
-        if (timeFilter !== 'all') {
-            const now = new Date();
-            let cutoffTime;
-            
-            switch (timeFilter) {
-                case '72h':
-                    cutoffTime = new Date(now.getTime() - 72 * 60 * 60 * 1000);
-                    break;
-                case '7d':
-                    cutoffTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                    break;
-                case '30d':
-                    cutoffTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-                    break;
-            }
-            
-            if (cutoffTime) {
-                filtered = filtered.filter(item => item.timestamp >= cutoffTime);
-            }
-        }
-
-        this.filteredData = filtered;
-        this.renderDashboard();
-    }
-
-    renderDashboard() {
-        this.updateSummaryCards();
-        this.renderCharts();
-        this.renderAbnormalResultsTable();
-        this.renderDataTable();
-    }
-
-    renderCharts() {
-        // Destroy all existing charts first
-        this.destroyAllCharts();
-        
-        this.renderLatencyChart();
-        this.renderLatencyEvolutionChart();
-        this.renderLatencyAZPairsChart();
-    }
-
-    destroyAllCharts() {
-        console.log('Destroying all charts...');
-        Object.keys(this.charts).forEach(key => {
-            if (this.charts[key]) {
-                console.log(`Destroying chart: ${key}`);
-                this.charts[key].destroy();
-                this.charts[key] = null;
-            }
-        });
-        
-        // Force destroy any remaining Chart instances on these canvases
-        ['latencyChart', 'latencyEvolutionChart', 'latencyAZPairsChart'].forEach(canvasId => {
-            const canvas = document.getElementById(canvasId);
-            if (canvas) {
-                // Get Chart.js instance if exists
-                const chartInstance = Chart.getChart(canvas);
-                if (chartInstance) {
-                    console.log(`Force destroying Chart.js instance on ${canvasId}`);
-                    chartInstance.destroy();
-                }
-            }
-        });
-    }
-
-    renderLatencyChart() {
-        const canvas = document.getElementById('latencyChart');
-        if (!canvas) {
-            console.error('Canvas latencyChart not found');
-            return;
-        }
-        
-        // Ensure any existing chart is destroyed
-        const existingChart = Chart.getChart(canvas);
-        if (existingChart) {
-            console.log('Destroying existing chart on latencyChart');
-            existingChart.destroy();
-        }
-        
-        const data = this.filteredData;
-        const regionStats = this.calculateRegionStats(data);
-
-        // Sort the data based on current sort order
-        let sortedRegions = Object.keys(regionStats);
-        
-        switch (this.latencySortOrder) {
-            case 'asc':
-                sortedRegions.sort((a, b) => regionStats[a].avgLatency - regionStats[b].avgLatency);
-                break;
-            case 'desc':
-                sortedRegions.sort((a, b) => regionStats[b].avgLatency - regionStats[a].avgLatency);
-                break;
-            case 'alphabetical':
-            default:
-                sortedRegions.sort((a, b) => this.formatRegionName(a).localeCompare(this.formatRegionName(b)));
-                break;
-        }
-
-        this.charts.latency = new Chart(canvas, {
-            type: 'bar',
-            data: {
-                labels: sortedRegions.map(region => this.formatRegionName(region)),
-                datasets: [{
-                    label: 'Average Latency (μs)',
-                    data: sortedRegions.map(region => regionStats[region].avgLatency),
-                    backgroundColor: 'rgba(255, 185, 0, 0.6)',
-                    borderColor: 'rgba(255, 185, 0, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Latency (μs)'
-                        }
-                    }
-                }
-            }
-        });
-    }
-
-    renderLatencyEvolutionChart() {
-        const canvas = document.getElementById('latencyEvolutionChart');
-        if (!canvas) {
-            console.error('Canvas latencyEvolutionChart not found');
-            return;
-        }
-        
-        const existingChart = Chart.getChart(canvas);
-        if (existingChart) {
-            existingChart.destroy();
-        }
-        
-        const data = this.filteredData;
-        const latencyEvolution = this.calculateLatencyEvolutionByRegion(data);
-
-        this.charts.latencyEvolution = new Chart(canvas, {
-            type: 'line',
-            data: {
-                labels: latencyEvolution.labels,
-                datasets: latencyEvolution.datasets
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Latency Evolution by Region Over Time'
-                    },
-                    legend: {
-                        position: 'top'
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Latency (μs)'
-                        }
-                    },
-                    x: {
-                        type: 'time',
-                        time: this.getTimeScaleConfig(),
-                        title: {
-                            display: true,
-                            text: 'Date'
-                        }
-                    }
-                },
-                elements: {
-                    point: {
-                        radius: 3,
-                        hoverRadius: 6
-                    }
-                }
-            }
-        });
-    }
-
-    renderLatencyAZPairsChart() {
-        const canvas = document.getElementById('latencyAZPairsChart');
-        if (!canvas) {
-            console.error('Canvas latencyAZPairsChart not found');
-            return;
-        }
-        
-        const existingChart = Chart.getChart(canvas);
-        if (existingChart) {
-            existingChart.destroy();
-        }
-        
-        const data = this.filteredData;
-        const azPairsEvolution = this.calculateLatencyEvolutionByAZPairs(data);
-
-        this.charts.latencyAZPairs = new Chart(canvas, {
-            type: 'line',
-            data: {
-                labels: azPairsEvolution.labels,
-                datasets: azPairsEvolution.datasets
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Detailed Latency Evolution by AZ Pairs (with Traffic Direction)'
-                    },
-                    legend: {
-                        position: 'top',
-                        labels: {
-                            boxWidth: 12,
-                            fontSize: 11
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Latency (μs)'
-                        }
-                    },
-                    x: {
-                        type: 'time',
-                        time: this.getTimeScaleConfig(),
-                        title: {
-                            display: true,
-                            text: 'Date'
-                        }
-                    }
-                },
-                elements: {
-                    point: {
-                        radius: 2,
-                        hoverRadius: 4
-                    }
-                }
-            }
-        });
-    }
-
-    // New method to get time scale configuration based on time filter
-    getTimeScaleConfig() {
-        const timeFilter = document.getElementById('timeFilter').value;
-        
-        switch (timeFilter) {
-            case '72h':
-                return {
-                    unit: 'hour',
-                    displayFormats: {
-                        hour: 'MMM dd HH:mm'
-                    },
-                    tooltipFormat: 'MMM dd, yyyy HH:mm'
-                };
-            case '7d':
-                return {
-                    unit: 'day',
-                    displayFormats: {
-                        day: 'MMM dd'
-                    },
-                    tooltipFormat: 'MMM dd, yyyy'
-                };
-            case '30d':
-                return {
-                    unit: 'day',
-                    displayFormats: {
-                        day: 'MMM dd'
-                    },
-                    tooltipFormat: 'MMM dd, yyyy'
-                };
-            default: // 'all'
-                return {
-                    unit: 'day',
-                    displayFormats: {
-                        day: 'MMM dd',
-                        month: 'MMM yyyy'
-                    },
-                    tooltipFormat: 'MMM dd, yyyy'
-                };
-        }
-    }
-
-    calculateRegionStats(data) {
-        const stats = {};
-        
-        data.forEach(item => {
-            if (!stats[item.region]) {
-                stats[item.region] = {
-                    totalBandwidth: 0,
-                    totalLatency: 0,
-                    count: 0
-                };
-            }
-            
-            stats[item.region].totalBandwidth += item.bandwidth;
-            stats[item.region].totalLatency += item.latency;
-            stats[item.region].count++;
-        });
-
-        Object.keys(stats).forEach(region => {
-            stats[region].avgBandwidth = stats[region].totalBandwidth / stats[region].count;
-            stats[region].avgLatency = stats[region].totalLatency / stats[region].count;
-        });
-
-        return stats;
-    }
-
-    calculateLatencyEvolutionByRegion(data) {
-        // Group data by time period and region
-        const timeRegionStats = {};
-        const timeFilter = document.getElementById('timeFilter').value;
-        
-        data.forEach(item => {
-            let timeKey;
-            // Use hourly granularity for 72h filter, daily for others
-            if (timeFilter === '72h') {
-                // Group by hour for 72h filter
-                const hour = new Date(item.timestamp);
-                hour.setMinutes(0, 0, 0); // Round to hour
-                timeKey = hour.toISOString();
-            } else {
-                // Group by day for other filters
-                timeKey = item.timestamp.toISOString().split('T')[0]; // Get YYYY-MM-DD format
-            }
-            
-            const region = item.region; // Use RowKey as region identifier
-            
-            if (!timeRegionStats[timeKey]) {
-                timeRegionStats[timeKey] = {};
-            }
-            
-            if (!timeRegionStats[timeKey][region]) {
-                timeRegionStats[timeKey][region] = {
-                    totalLatency: 0,
-                    count: 0
-                };
-            }
-            
-            // Add latency data (this automatically averages aller/retour since we're grouping by region only)
-            timeRegionStats[timeKey][region].totalLatency += item.latency;
-            timeRegionStats[timeKey][region].count++;
-        });
-
-        // Get all time periods and regions
-        const timePeriods = Object.keys(timeRegionStats).sort();
-        const regions = [...new Set(data.map(item => item.region))].sort();
-        
-        // Colors for regions
-        const colors = [
-            'rgba(255, 99, 132, 1)',    // Red
-            'rgba(54, 162, 235, 1)',    // Blue
-            'rgba(255, 205, 86, 1)',    // Yellow
-            'rgba(75, 192, 192, 1)',    // Teal
-            'rgba(153, 102, 255, 1)',   // Purple
-            'rgba(255, 159, 64, 1)',    // Orange
-            'rgba(199, 199, 199, 1)',   // Grey
-            'rgba(83, 102, 255, 1)',    // Indigo
-        ];
-
-        // Create datasets for each region
-        const datasets = regions.map((region, index) => {
-            const regionData = timePeriods.map(timePeriod => {
-                const stats = timeRegionStats[timePeriod][region];
-                return stats ? {
-                    x: new Date(timePeriod),
-                    y: stats.totalLatency / stats.count
-                } : null;
-            }).filter(point => point !== null);
-
-            return {
-                label: this.formatRegionName(region),
-                data: regionData,
-                borderColor: colors[index % colors.length],
-                backgroundColor: colors[index % colors.length].replace('1)', '0.1)'),
-                fill: false,
-                tension: 0.1,
-                spanGaps: true, // Connect points even if some data is missing
-                pointRadius: 3,
-                pointHoverRadius: 6
-            };
-        });
-
-        return {
-            labels: timePeriods.map(timePeriod => new Date(timePeriod)),
-            datasets: datasets
-        };
-    }
-
-    calculateLatencyEvolutionByAZPairs(data) {
-        // Group data by time period and AZ pair
-        const timeStats = {};
-        const timeFilter = document.getElementById('timeFilter').value;
-        
-        data.forEach(item => {
-            let timeKey;
-            // Use hourly granularity for 72h filter, daily for others
-            if (timeFilter === '72h') {
-                // Group by hour for 72h filter
-                const hour = new Date(item.timestamp);
-                hour.setMinutes(0, 0, 0); // Round to hour
-                timeKey = hour.toISOString();
-            } else {
-                // Group by day for other filters
-                timeKey = item.timestamp.toISOString().split('T')[0];
-            }
-            
-            const azPair = `${item.source} → ${item.destination}`;
-            
-            if (!timeStats[timeKey]) {
-                timeStats[timeKey] = {};
-            }
-            
-            if (!timeStats[timeKey][azPair]) {
-                timeStats[timeKey][azPair] = {
-                    latencies: []
-                };
-            }
-            
-            timeStats[timeKey][azPair].latencies.push(item.latency);
-        });
-
-        // Get all unique time periods and AZ pairs
-        const allTimePeriods = Object.keys(timeStats).sort();
-        const allAZPairs = new Set();
-        
-        Object.values(timeStats).forEach(timeData => {
-            Object.keys(timeData).forEach(azPair => {
-                allAZPairs.add(azPair);
-            });
-        });
-
-        const sortedAZPairs = Array.from(allAZPairs).sort();
-
-        // Generate colors for each AZ pair
-        const colors = [
-            'rgba(255, 99, 132, 1)',   // Red
-            'rgba(54, 162, 235, 1)',   // Blue
-            'rgba(255, 206, 86, 1)',   // Yellow
-            'rgba(75, 192, 192, 1)',   // Teal
-            'rgba(153, 102, 255, 1)',  // Purple
-            'rgba(255, 159, 64, 1)',   // Orange
-            'rgba(199, 199, 199, 1)',  // Grey
-            'rgba(83, 102, 255, 1)',   // Indigo
-            'rgba(255, 99, 255, 1)',   // Magenta
-            'rgba(99, 255, 132, 1)',   // Green
-            'rgba(255, 206, 132, 1)',  // Light Orange
-            'rgba(132, 99, 255, 1)'    // Violet
-        ];
-
-        const datasets = sortedAZPairs.map((azPair, index) => {
-            const azPairData = allTimePeriods.map(timePeriod => {
-                const timeData = timeStats[timePeriod];
-                if (timeData && timeData[azPair] && timeData[azPair].latencies.length > 0) {
-                    // Calculate average latency for this time period and AZ pair
-                    const avgLatency = timeData[azPair].latencies.reduce((sum, lat) => sum + lat, 0) / timeData[azPair].latencies.length;
-                    return {
-                        x: new Date(timePeriod),
-                        y: Math.round(avgLatency)
-                    };
-                }
-                return null; // No data for this time period
-            }).filter(point => point !== null);
-
-            return {
-                label: azPair,
-                data: azPairData,
-                borderColor: colors[index % colors.length],
-                backgroundColor: colors[index % colors.length].replace('1)', '0.1)'),
-                fill: false,
-                tension: 0.1,
-                spanGaps: true, // Connect points even if some data is missing
-                pointRadius: 2,
-                pointHoverRadius: 4
-            };
-        });
-
-        return {
-            labels: allTimePeriods.map(timePeriod => new Date(timePeriod)),
-            datasets: datasets
-        };
-    }
-
-    calculateLatencyDistribution(data) {
-        // Define latency ranges in microseconds
-        const ranges = [
-            { label: '< 100 μs', min: 0, max: 100 },
-            { label: '100-500 μs', min: 100, max: 500 },
-            { label: '500-1000 μs', min: 500, max: 1000 },
-            { label: '1000-5000 μs', min: 1000, max: 5000 },
-            { label: '> 5000 μs', min: 5000, max: Infinity }
-        ];
-
-        const counts = ranges.map(() => 0);
-        
-        data.forEach(item => {
-            const latency = item.latency;
-            for (let i = 0; i < ranges.length; i++) {
-                if (latency >= ranges[i].min && latency < ranges[i].max) {
-                    counts[i]++;
-                    break;
-                }
-            }
-        });
-
-        return {
-            labels: ranges.map(r => r.label),
-            counts: counts
-        };
-    }
-
-    calculateTimeSeriesData(data) {
-        // Group data by day
-        const dailyStats = {};
-        
-        data.forEach(item => {
-            const day = item.timestamp.toISOString().split('T')[0];
-            
-            if (!dailyStats[day]) {
-                dailyStats[day] = {
-                    totalBandwidth: 0,
-                    totalLatency: 0,
-                    count: 0
-                };
-            }
-            
-            dailyStats[day].totalBandwidth += item.bandwidth;
-            dailyStats[day].totalLatency += item.latency;
-            dailyStats[day].count++;
-        });
-
-        const sortedDays = Object.keys(dailyStats).sort();
-        
-        return {
-            labels: sortedDays.map(day => new Date(day)),
-            bandwidth: sortedDays.map(day => (dailyStats[day].totalBandwidth / dailyStats[day].count).toFixed(2)),
-            latency: sortedDays.map(day => {
-                return {
-                    x: new Date(day),
-                    y: Math.round(dailyStats[day].totalLatency / dailyStats[day].count)
-                };
-            })
-        };
-    }
-
-    updateSummaryCards() {
-        const data = this.filteredData;
-        
-        // Total tests
-        document.getElementById('totalTests').textContent = data.length;
-        
-        // Unique regions
-        const uniqueRegions = new Set(data.map(item => item.region)).size;
-        document.getElementById('uniqueRegions').textContent = uniqueRegions;
-        
-        // Average latency
-        const avgLatency = data.length > 0 
-            ? Math.round(data.reduce((sum, item) => sum + item.latency, 0) / data.length)
-            : 0;
-        document.getElementById('avgLatency').textContent = `${avgLatency} μs`;
-        
-        // Abnormal results count for TCP one-way tests (intra-zone > 500 μs, inter-zone > 1000 μs)
-        const abnormalCount = data.filter(item => {
-            const isIntraZone = item.source === item.destination;
-            return isIntraZone ? item.latency > 500 : item.latency > 1000;
-        }).length;
-        document.getElementById('abnormalCount').textContent = abnormalCount;
-    }
-
-    renderDataTable() {
-        const tbody = document.getElementById('dataTableBody');
-        tbody.innerHTML = '';
-        
-        // Show latest 100 results
-        const latestData = this.filteredData
-            .sort((a, b) => b.timestamp - a.timestamp)
-            .slice(0, 100);
-        
-        latestData.forEach(item => {
-            const row = tbody.insertRow();
-            row.innerHTML = `
-                <td>${item.timestamp.toLocaleString()}</td>
-                <td>${this.formatRegionName(item.region)}</td>
-                <td>${item.source}</td>
-                <td>${item.destination}</td>
-                <td>${item.bandwidth.toFixed(2)} Gb/s</td>
-                <td>${Math.round(item.latency)} μs</td>
-            `;
-        });
-    }
-
-    renderAbnormalResultsTable() {
-        const tbody = document.getElementById('abnormalResultsTableBody');
-        const noResultsAlert = document.getElementById('noAbnormalResults');
-        const tableContainer = document.getElementById('abnormalResultsTable');
-        
-        tbody.innerHTML = '';
-        
-        // Filter for abnormal results (TCP one-way tests):
-        // - Intra-zone (same source/destination): latency > 500 μs
-        // - Inter-zone (different source/destination): latency > 1000 μs
-        const abnormalResults = this.filteredData
-            .filter(item => {
-                const isIntraZone = item.source === item.destination;
-                return isIntraZone ? item.latency > 500 : item.latency > 1000;
-            })
-            .sort((a, b) => b.timestamp - a.timestamp)
-            .slice(0, 50); // Show up to 50 abnormal results
-        
-        if (abnormalResults.length === 0) {
-            // Show "no abnormal results" message and hide table
-            noResultsAlert.style.display = 'block';
-            tableContainer.style.display = 'none';
-        } else {
-            // Hide message and show table with results
-            noResultsAlert.style.display = 'none';
-            tableContainer.style.display = 'block';
-            
-            abnormalResults.forEach(item => {
-                const row = tbody.insertRow();
-                const latencyClass = item.latency > 5000 ? 'text-danger fw-bold' : 'text-warning fw-bold';
-                
-                row.innerHTML = `
-                    <td>${item.timestamp.toLocaleString()}</td>
-                    <td>${this.formatRegionName(item.region)}</td>
-                    <td>${item.source}</td>
-                    <td>${item.destination}</td>
-                    <td>${item.bandwidth.toFixed(2)} Gb/s</td>
-                    <td class="${latencyClass}">${Math.round(item.latency)} μs</td>
-                `;
-                
-                // Add row highlighting for very high latency
-                if (item.latency > 5000) {
-                    row.classList.add('table-danger');
-                } else {
-                    row.classList.add('table-warning');
-                }
-            });
-        }
-    }
-
-    populateFilters() {
-        const regions = [...new Set(this.data.map(item => item.region))].sort();
-        const sources = [...new Set(this.data.map(item => item.source))].sort();
-        const destinations = [...new Set(this.data.map(item => item.destination))].sort();
-
-        // Populate region filter
-        const regionFilter = document.getElementById('regionFilter');
-        regionFilter.innerHTML = '';
-        regions.forEach(region => {
-            const option = document.createElement('option');
-            option.value = region;
-            option.textContent = this.formatRegionName(region);
-            regionFilter.appendChild(option);
-        });
-
-        // Populate source filter
-        const sourceFilter = document.getElementById('sourceFilter');
-        sourceFilter.innerHTML = '';
-        sources.forEach(source => {
-            const option = document.createElement('option');
-            option.value = source;
-            option.textContent = source;
-            sourceFilter.appendChild(option);
-        });
-
-        // Populate destination filter
-        const destinationFilter = document.getElementById('destinationFilter');
-        destinationFilter.innerHTML = '';
-        destinations.forEach(destination => {
-            const option = document.createElement('option');
-            option.value = destination;
-            option.textContent = destination;
-            destinationFilter.appendChild(option);
-        });
-    }
-
-    formatRegionName(region) {
-        const regionNames = {
-            // Full region names
-            'francecentral': 'France Central',
-            'francesouth': 'France South',
-            'westeurope': 'West Europe', 
-            'northeurope': 'North Europe',
-            'centralus': 'Central US',
-            'eastus': 'East US',
-            'eastus2': 'East US 2',
-            'westus': 'West US',
-            'westus2': 'West US 2',
-            'westus3': 'West US 3',
-            'eastasia': 'East Asia',
-            'southeastasia': 'Southeast Asia',
-            'australiaeast': 'Australia East',
-            'australiasoutheast': 'Australia Southeast',
-            'australiacentral': 'Australia Central',
-            'australiacentral2': 'Australia Central 2',
-            'brazilsouth': 'Brazil South',
-            'brazilsoutheast': 'Brazil Southeast',
-            'canadacentral': 'Canada Central',
-            'canadaeast': 'Canada East',
-            'chinaeast': 'China East',
-            'chinaeast2': 'China East 2',
-            'chinanorth': 'China North',
-            'chinanorth2': 'China North 2',
-            'chinanorth3': 'China North 3',
-            'germanywestcentral': 'Germany West Central',
-            'germanynorth': 'Germany North',
-            'indiacentral': 'India Central',
-            'indiawest': 'India West',
-            'indiasouth': 'India South',
-            'japaneast': 'Japan East',
-            'japanwest': 'Japan West',
-            'koreacentral': 'Korea Central',
-            'koreasouth': 'Korea South',
-            'norwayeast': 'Norway East',
-            'norwaywest': 'Norway West',
-            'southafricanorth': 'South Africa North',
-            'southafricawest': 'South Africa West',
-            'southcentralus': 'South Central US',
-            'southindia': 'South India',
-            'swedencentral': 'Sweden Central',
-            'swedensouth': 'Sweden South',
-            'switzerlandnorth': 'Switzerland North',
-            'switzerlandwest': 'Switzerland West',
-            'uaecentral': 'UAE Central',
-            'uaenorth': 'UAE North',
-            'uksouth': 'UK South',
-            'ukwest': 'UK West',
-            'westcentralus': 'West Central US',
-            'northcentralus': 'North Central US',
-            'eastus2euap': 'East US 2 EUAP',
-            'centraluseuap': 'Central US EUAP',
-            'austriaeast': 'Austria East',
-            'chilecentral': 'Chile Central',
-            'italynorth': 'Italy North',
-            'israelcentral': 'Israel Central',
-            'polandcentral': 'Poland Central',
-            'qatarcentral': 'Qatar Central',
-            'spaincentral': 'Spain Central',
-            'taiwannorth': 'Taiwan North',
-            'taiwannorthwest': 'Taiwan Northwest',
-            'mexicocentral': 'Mexico Central',
-            'belgiumcentral': 'Belgium Central',
-            
-            // Common Azure region abbreviations
-            'ea': 'East Asia',
-            'sea': 'Southeast Asia',
-            'we': 'West Europe',
-            'ne': 'North Europe',
-            'frc': 'France Central',
-            'frs': 'France South',
-            'cus': 'Central US',
-            'eus': 'East US',
-            'eus2': 'East US 2',
-            'wus': 'West US',
-            'wus2': 'West US 2',
-            'wus3': 'West US 3',
-            'scus': 'South Central US',
-            'ncus': 'North Central US',
-            'wcus': 'West Central US',
-            'ae': 'Australia East',
-            'ase': 'Australia Southeast',
-            'acl': 'Australia Central',
-            'acl2': 'Australia Central 2',
-            'brs': 'Brazil South',
-            'brse': 'Brazil Southeast',
-            'cnc': 'Canada Central',
-            'cae': 'Canada East',
-            'gwc': 'Germany West Central',
-            'gn': 'Germany North',
-            'inc': 'India Central',
-            'inw': 'India West',
-            'ins': 'India South',
-            'jpe': 'Japan East',
-            'jpw': 'Japan West',
-            'krc': 'Korea Central',
-            'krs': 'Korea South',
-            'noe': 'Norway East',
-            'now': 'Norway West',
-            'san': 'South Africa North',
-            'saw': 'South Africa West',
-            'sdc': 'Sweden Central',
-            'sds': 'Sweden South',
-            'szn': 'Switzerland North',
-            'szw': 'Switzerland West',
-            'uac': 'UAE Central',
-            'uan': 'UAE North',
-            'uks': 'UK South',
-            'ukw': 'UK West',
-            'clc': 'Chile Central',
-            'itn': 'Italy North',
-            'isc': 'Israel Central',
-            'plc': 'Poland Central',
-            'qac': 'Qatar Central',
-            'spc': 'Spain Central',
-            'twn': 'Taiwan North',
-            'twnw': 'Taiwan Northwest',
-            'mxc': 'Mexico Central',
-            'nzn': 'New Zealand North',
-            'nwe': 'Norway East',
-            'idc': 'Indonesia Central',
-            'myw': 'Malaysia West',
-            'ilc': 'Israel Central',
-            'bec': 'Belgium Central',
-            
-            // Availability zones
-            'az1': 'Availability Zone 1',
-            'az2': 'Availability Zone 2', 
-            'az3': 'Availability Zone 3',
-            
-            // Add fallback for unknown regions
-            'unknown': 'Unknown Region'
-        };
-        
-        return regionNames[region] || region.charAt(0).toUpperCase() + region.slice(1);
-    }
-
-    showLoading(show) {
-        this.isLoading = show;
-        const spinner = document.getElementById('loadingSpinner');
-        spinner.style.display = show ? 'block' : 'none';
-    }
-
-    showError(message) {
-        const errorDiv = document.getElementById('errorMessage');
-        const errorText = document.getElementById('errorText');
-        errorText.textContent = message;
-        errorDiv.style.display = 'block';
+        this.syncFilterControls();
+        this.worker?.postMessage({ type: 'filter', loadId: this.activeLoad, filters: this.filters });
     }
 
     clearFilters() {
-        // Clear all multiple selects
-        document.getElementById('regionFilter').selectedIndex = -1;
-        document.getElementById('sourceFilter').selectedIndex = -1;
-        document.getElementById('destinationFilter').selectedIndex = -1;
-        
-        // Reset time filter to default (7d)
-        document.getElementById('timeFilter').value = '7d';
-        
-        // Apply the cleared filters
-        this.applyFilters();
+        const changedRange = this.filters.range !== '7d';
+        this.filters = { regions: [], sources: [], destinations: [], range: '7d', scope: 'all' };
+        element('regionSearch').value = '';
+        element('regionSearch').dispatchEvent(new Event('input'));
+        this.syncFilterControls();
+        if (changedRange) this.loadData();
+        else this.applyFilters();
+    }
+
+    renderDashboard() {
+        const summary = this.model.summary;
+        for (const [id, value, decimal] of [['totalTests', summary.tests], ['uniqueRegions', summary.regions],
+            ['avgLatency', summary.avgLatency], ['p95Latency', summary.p95Latency], ['abnormalCount', summary.anomalies]]) {
+            const compact = value >= 100000 || (value >= 10000 && ['avgLatency', 'p95Latency'].includes(id));
+            element(id).textContent = compact ? compactFormat.format(value) : formatted(value, decimal);
+            element(id).title = formatted(value, decimal);
+        }
+        const rangeLabels = { '72h': 'Last 72 hours', '7d': 'Last 7 days', '30d': 'Last 30 days', '90d': 'Last 90 days', all: 'Available 365-day history' };
+        element('totalTestsDetail').textContent = rangeLabels[this.filters.range];
+        element('regionDetail').textContent = `${summary.regions} Azure ${summary.regions === 1 ? 'region' : 'regions'}`;
+        element('abnormalDetail').textContent = summary.tests ? `${formatted(summary.anomalies / summary.tests * 100, true)}% of selected tests` : 'Above latency thresholds';
+        element('abnormalCard').classList.toggle('healthy', summary.tests > 0 && !summary.anomalies);
+        element('healthLabel').textContent = summary.tests ? `${formatted(summary.healthyPercent, true)}% within thresholds` : 'No matching measurements';
+        element('emptyState').hidden = summary.tests > 0;
+        element('regionChartDetail').textContent = `${summary.regions} regions \u00b7 Mean and P95 \u00b7 \u00b5s`;
+        element('resultsTotal').textContent = `${formatted(summary.tests)} matching measurements`;
+        element('recentBadge').textContent = formatted(summary.tests);
+        element('anomalyBadge').textContent = formatted(summary.anomalies);
+        document.querySelectorAll('.granularity-label').forEach(label => { label.textContent = this.filters.range === '72h' ? 'Hourly' : 'Daily'; });
+        this.renderLatencyChart();
+        this.renderTimeline('latencyEvolutionChart', this.model.regions.map(region => ({ id: region.id, label: region.name, data: region.timeline })), 'regions', 'regionLegend');
+        this.renderTimeline('latencyAZPairsChart', this.model.pairs.map(pair => ({ id: pair.id, label: `${pair.source} \u2192 ${pair.destination}`, data: pair.timeline })), 'pairs', 'pairLegend');
+        this.renderMatrix();
+        this.renderDataTable();
+    }
+
+    chartOptions() {
+        return {
+            responsive: true, maintainAspectRatio: false, animation: false, resizeDelay: 80,
+            interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { display: false }, tooltip: { backgroundColor: '#24323e', padding: 14, cornerRadius: 4, titleFont: { size: 15 }, bodyFont: { size: 14 } } },
+            scales: {
+                x: { border: { display: false }, grid: { color: '#d9e1e7', drawTicks: false }, ticks: { padding: 12, font: { size: 14 }, maxTicksLimit: 6 } },
+                y: { border: { display: false }, grid: { display: false }, ticks: { padding: 12, font: { size: 14 }, autoSkip: false } }
+            }
+        };
+    }
+
+    updateChart(id, type, data, options) {
+        const canvas = element(id);
+        const hasData = data.datasets.some(dataset => dataset.data.some(value => value !== null));
+        canvas.closest('.chart-viewport, .line-chart-wrap').querySelector('.chart-empty').hidden = hasData;
+        if (this.charts[id]) {
+            if (type === 'line') setTimelineFocus(this.charts[id], null);
+            this.charts[id].data = data;
+            this.charts[id].options = options;
+            this.charts[id].update('none');
+        } else {
+            this.charts[id] = new Chart(canvas, { type, data, options, plugins: type === 'line' ? [timelineFocusPlugin] : [] });
+        }
+    }
+
+    sortedRegions() {
+        const regions = [...this.model.regions];
+        if (this.latencySortOrder === 'asc') regions.sort((left, right) => left.latency - right.latency);
+        if (this.latencySortOrder === 'desc') regions.sort((left, right) => right.latency - left.latency);
+        return regions;
+    }
+
+    renderLatencyChart() {
+        if (!this.model) return;
+        const regions = this.sortedRegions();
+        element('latencyChartContainer').style.height = `${Math.max(440, regions.length * 38 + 56)}px`;
+        const options = this.chartOptions();
+        options.indexAxis = 'y';
+        options.interaction.axis = 'y';
+        options.scales.x.beginAtZero = true;
+        options.scales.x.title = { display: true, text: 'One-way latency (\u00b5s)', font: { size: 14 } };
+        options.plugins.tooltip.callbacks = {
+            label: item => `${item.dataset.label}: ${formatted(item.raw, true)} \u00b5s`,
+            afterTitle: items => `${formatted(regions[items[0].dataIndex].count)} measurements`
+        };
+        this.updateChart('latencyChart', 'bar', {
+            labels: regions.map(region => region.name),
+            datasets: [
+                { label: 'Mean', data: regions.map(region => region.latency), backgroundColor: '#087f8c', borderRadius: 2, barThickness: 12 },
+                { label: 'P95', data: regions.map(region => region.p95), backgroundColor: '#9bc9cf', borderRadius: 2, barThickness: 9 }
+            ]
+        }, options);
     }
 
     sortLatencyChart(order) {
         this.latencySortOrder = order;
-        // Re-render only the latency chart with the new sort order
-        this.renderLatencyChart();
-        
-        // Visual feedback: highlight the active sort button
-        document.querySelectorAll('.btn-group button').forEach(btn => {
-            btn.classList.remove('active');
+        document.querySelectorAll('[data-sort]').forEach(button => {
+            button.classList.toggle('active', button.dataset.sort === order);
+            button.setAttribute('aria-pressed', String(button.dataset.sort === order));
         });
-        
-        // Highlight the appropriate button based on sort order
-        const buttonSelectors = {
-            'asc': 'button[onclick*="sortLatencyChart(\'asc\')"]',
-            'desc': 'button[onclick*="sortLatencyChart(\'desc\')"]',
-            'alphabetical': 'button[onclick*="sortLatencyChart(\'alphabetical\')"]'
+        this.renderLatencyChart();
+    }
+
+    renderTimeline(id, series, group, legendId) {
+        const options = this.chartOptions();
+        options.parsing = false;
+        options.interaction.mode = 'nearest';
+        options.interaction.axis = 'xy';
+        options.scales.y.beginAtZero = true;
+        options.scales.y.grid = { color: '#d9e1e7', drawTicks: false };
+        options.scales.y.ticks = { maxTicksLimit: 6, padding: 12, font: { size: 14 } };
+        options.scales.x.type = 'linear';
+        options.scales.x.grid = { display: false };
+        options.scales.x.ticks.stepSize = this.filters.range === '72h' ? 3600000 : 86400000;
+        options.scales.x.ticks.callback = value => (this.filters.range === '72h' ? hourFormat : dayFormat).format(value);
+        const times = series.flatMap(item => item.data.map(point => point.x));
+        if (times.length) {
+            options.scales.x.min = Math.min(...times);
+            options.scales.x.max = Math.max(...times);
+            if (options.scales.x.min === options.scales.x.max) {
+                options.scales.x.min -= 3600000;
+                options.scales.x.max += 3600000;
+            }
+        }
+        options.plugins.tooltip.filter = (item, index) => index === 0;
+        options.plugins.tooltip.displayColors = false;
+        options.plugins.tooltip.titleFont = { size: 17 };
+        options.plugins.tooltip.bodyFont = { size: 15 };
+        options.plugins.tooltip.bodySpacing = 6;
+        options.plugins.tooltip.titleMarginBottom = 10;
+        options.plugins.tooltip.borderWidth = 2;
+        options.plugins.tooltip.borderColor = context => context.tooltip?.dataPoints?.[0]?.dataset.borderColor || '#24323e';
+        options.plugins.tooltip.callbacks = {
+            title: items => items[0].dataset.label,
+            beforeBody: items => `${tooltipTimestampFormat.format(items[0].parsed.x)} UTC`,
+            label: item => `Latency: ${formatted(item.parsed.y, true)} \u00b5s`,
+            afterLabel: item => `${formatted(item.raw.count)} measurements`
         };
-        
-        const activeButton = document.querySelector(buttonSelectors[order]);
-        if (activeButton) {
-            activeButton.classList.add('active');
+        const datasets = series.map((item, index) => ({
+            ...item, borderColor: COLORS[index % COLORS.length], backgroundColor: COLORS[index % COLORS.length],
+            borderWidth: 2.5, pointRadius: item.data.length <= 8 ? 4 : 2, pointHoverRadius: 6,
+            pointHitRadius: 12, tension: 0.18, spanGaps: false, fill: false, hidden: this.hiddenSeries[group].has(item.id)
+        }));
+        this.updateChart(id, 'line', { datasets }, options);
+        const fragment = document.createDocumentFragment();
+        datasets.forEach((dataset, index) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'legend-item';
+            const chart = this.charts[id];
+            button.classList.toggle('is-focused', chart.$focusedDataset === index);
+            button.classList.toggle('is-muted', chart.$focusedDataset != null && chart.$focusedDataset !== index);
+            button.setAttribute('aria-pressed', String(!dataset.hidden));
+            button.title = `Toggle ${dataset.label}`;
+            const swatch = document.createElement('span');
+            swatch.className = 'legend-swatch';
+            swatch.style.setProperty('--series-color', dataset.borderColor);
+            button.append(swatch, document.createTextNode(dataset.label));
+            const focus = () => {
+                chart.setActiveElements([]);
+                chart.tooltip.setActiveElements([], { x: 0, y: 0 });
+                setTimelineFocus(chart, index);
+                chart.draw();
+            };
+            const clearFocus = () => {
+                if (chart.$focusedDataset === index && setTimelineFocus(chart, null)) chart.draw();
+            };
+            button.addEventListener('mouseenter', focus);
+            button.addEventListener('mouseleave', () => {
+                if (document.activeElement !== button) clearFocus();
+            });
+            button.addEventListener('focus', focus);
+            button.addEventListener('blur', () => {
+                if (!button.matches(':hover')) clearFocus();
+            });
+            button.addEventListener('click', () => {
+                const visible = chart.isDatasetVisible(index);
+                if (visible) this.hiddenSeries[group].add(dataset.id);
+                else this.hiddenSeries[group].delete(dataset.id);
+                setTimelineFocus(chart, null);
+                chart.setDatasetVisibility(index, !visible);
+                chart.update('none');
+                button.setAttribute('aria-pressed', String(!visible));
+                if (!visible) focus();
+            });
+            fragment.append(button);
+        });
+        element(legendId).replaceChildren(fragment);
+    }
+
+    renderMatrix() {
+        const pairs = this.model.pairs;
+        if (!pairs.length) {
+            const empty = document.createElement('div');
+            empty.className = 'matrix-empty';
+            empty.textContent = 'No matching measurements';
+            element('azMatrix').replaceChildren(empty);
+        } else {
+            const sources = [...new Set(pairs.map(pair => pair.source))].sort();
+            const destinations = [...new Set(pairs.map(pair => pair.destination))].sort();
+            const minimum = Math.min(...pairs.map(pair => pair.latency));
+            const maximum = Math.max(...pairs.map(pair => pair.latency));
+            const table = document.createElement('table');
+            table.className = 'heatmap';
+            table.setAttribute('aria-label', 'Average latency from source rows to destination columns, in microseconds');
+            const heading = table.createTHead().insertRow();
+            ['', ...destinations].forEach(destination => {
+                const cell = document.createElement('th');
+                cell.scope = 'col';
+                cell.textContent = destination;
+                heading.append(cell);
+            });
+            const tbody = table.createTBody();
+            for (const source of sources) {
+                const row = tbody.insertRow();
+                const heading = document.createElement('th');
+                heading.scope = 'row';
+                heading.textContent = source;
+                row.append(heading);
+                for (const destination of destinations) {
+                    const pair = pairs.find(item => item.source === source && item.destination === destination);
+                    const button = document.createElement('button');
+                    button.className = `heat-cell${source === destination ? ' diagonal' : ''}`;
+                    button.type = 'button';
+                    button.disabled = !pair;
+                    button.textContent = pair ? formatted(pair.latency) : '--';
+                    const strength = pair ? (pair.latency - minimum) / (maximum - minimum || 1) : 0;
+                    button.style.backgroundColor = `hsl(${160 + strength * 28} ${32 + strength * 9}% ${94 - strength * 54}%)`;
+                    if (strength > 0.65) button.style.color = '#ffffff';
+                    button.title = pair ? `${source} \u2192 ${destination}: ${formatted(pair.latency, true)} \u00b5s, ${formatted(pair.count)} tests` : 'No measurements for this path';
+                    button.setAttribute('aria-label', button.title);
+                    button.addEventListener('click', () => {
+                        this.filters.sources = [source];
+                        this.filters.destinations = [destination];
+                        this.applyFilters();
+                    });
+                    row.insertCell().append(button);
+                }
+            }
+            element('azMatrix').replaceChildren(table);
+        }
+        for (const [id, sameZone] of [['intraLatency', true], ['interLatency', false]]) {
+            const matches = pairs.filter(pair => (pair.source === pair.destination) === sameZone);
+            const count = matches.reduce((sum, pair) => sum + pair.count, 0);
+            const mean = count ? matches.reduce((sum, pair) => sum + pair.latency * pair.count, 0) / count : null;
+            element(id).textContent = `${formatted(mean)} \u00b5s`;
         }
     }
 
-    exportData() {
-        const csv = this.convertToCSV(this.filteredData);
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `network-benchmark-${new Date().toISOString().split('T')[0]}.csv`;
-        a.click();
-        window.URL.revokeObjectURL(url);
+    setResultTab(tab) {
+        this.resultTab = tab;
+        this.tablePage = 0;
+        for (const [id, name, panel] of [['allResultsTab', 'recent', 'recentPanel'], ['abnormalResultsTab', 'abnormal', 'abnormalPanel']]) {
+            const active = name === tab;
+            element(id).setAttribute('aria-selected', String(active));
+            element(id).tabIndex = active ? 0 : -1;
+            element(panel).hidden = !active;
+        }
+        this.renderDataTable();
     }
 
-    convertToCSV(data) {
-        const headers = ['Timestamp', 'Region', 'Source', 'Destination', 'Bandwidth (Gb/s)', 'Latency (μs)'];
-        const rows = data.map(item => [
-            item.timestamp.toISOString(),
-            item.region,
-            item.source,
-            item.destination,
-            item.bandwidth.toFixed(2),
-            Math.round(item.latency)
-        ]);
+    renderDataTable() {
+        const data = this.model?.[this.resultTab] || [];
+        const pages = Math.max(1, Math.ceil(data.length / 25));
+        this.tablePage = Math.max(0, Math.min(this.tablePage, pages - 1));
+        const start = this.tablePage * 25;
+        const fragment = document.createDocumentFragment();
+        for (const record of data.slice(start, start + 25)) {
+            const row = document.createElement('tr');
+            const abnormal = record.latency > (record.source === record.destination ? 500 : 1000);
+            const values = [timestampFormat.format(record.timestamp), this.regionNames.get(record.region) || record.region,
+                record.source, record.destination, formatted(record.bandwidth, true), formatted(record.latency)];
+            values.forEach((value, index) => {
+                const cell = row.insertCell();
+                cell.textContent = value;
+                if (index === 0) cell.title = new Date(record.timestamp).toISOString();
+                if (index === 2 || index === 3) cell.className = 'zone-tag';
+                if (index === 4 || index === 5) {
+                    cell.className = `numeric${index === 5 && abnormal ? ' high-latency' : ''}`;
+                    const unit = document.createElement('span');
+                    unit.className = 'cell-unit';
+                    unit.textContent = index === 4 ? 'Gb/s' : '\u00b5s';
+                    cell.append(unit);
+                }
+            });
+            const badge = document.createElement('span');
+            badge.className = `result-status${abnormal ? ' elevated' : ''}`;
+            badge.textContent = abnormal ? 'Elevated' : 'Expected';
+            row.insertCell().append(badge);
+            fragment.append(row);
+        }
+        if (!data.length) {
+            const row = document.createElement('tr');
+            const cell = row.insertCell();
+            cell.colSpan = 7;
+            cell.className = 'table-empty';
+            cell.textContent = this.resultTab === 'abnormal' ? 'No abnormal results in the selected measurements.' : 'No measurements match the current filters.';
+            fragment.append(row);
+        }
+        element(this.resultTab === 'recent' ? 'dataTableBody' : 'abnormalResultsTableBody').replaceChildren(fragment);
+        element('tablePageInfo').textContent = data.length ? `${start + 1}\u2013${Math.min(start + 25, data.length)} of ${data.length} latest ${this.resultTab === 'abnormal' ? 'abnormal ' : ''}results` : '0 results';
+        element('pageNumber').textContent = `${this.tablePage + 1} / ${pages}`;
+        element('previousPage').disabled = this.tablePage === 0;
+        element('nextPage').disabled = this.tablePage >= pages - 1;
+    }
 
-        return [headers, ...rows].map(row => row.join(',')).join('\n');
+    exportData() {
+        if (!this.model?.summary.tests || this.isLoading) return;
+        element('exportButton').disabled = true;
+        this.worker.postMessage({ type: 'export', loadId: this.activeLoad });
     }
 }
 
-// Export functions for global access
-window.exportData = () => {
-    if (window.dashboard) {
-        window.dashboard.exportData();
-    }
-};
-
-window.clearFilters = () => {
-    if (window.dashboard) {
-        window.dashboard.clearFilters();
-    }
-};
-
-// Store dashboard instance globally
 document.addEventListener('DOMContentLoaded', () => {
-    // Prevent creating multiple instances
-    if (window.dashboard) {
-        console.log('Dashboard instance already exists, skipping creation');
-        return;
-    }
-    
-    console.log('Creating new dashboard instance');
     window.dashboard = new NetworkBenchmarkDashboard();
+    window.exportData = () => window.dashboard.exportData();
+    window.clearFilters = () => window.dashboard.clearFilters();
 });

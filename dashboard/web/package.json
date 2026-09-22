@@ -4,8 +4,11 @@
   "description": "Network benchmark dashboard for Azure Table Storage data",
   "scripts": {
     "build": "echo 'No build step required for static content'",
-    "start": "echo 'Static content ready for deployment'"
+    "start": "node server.cjs",
+    "start:local-api": "LOCAL_API=1 node server.cjs",
+    "test": "node --test data-worker.test.cjs"
   },
+  "engines": { "node": ">=20" },
   "dependencies": {},
   "devDependencies": {}
 }

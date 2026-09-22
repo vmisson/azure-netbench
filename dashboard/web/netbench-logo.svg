@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 64 64" role="img" aria-labelledby="logo-title">
+    <title id="logo-title">Netbench cloud network</title>
+    <path d="M32 34v10M14 51v-7h36v7M32 44v7" fill="none" stroke="#087f8c" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M18 35C11.4 35 6 29.6 6 23s5.4-12 12-12c1.3 0 2.5.2 3.7.6C24.3 6.8 29.3 4 34.5 4c7.6 0 13.8 6.2 13.8 13.8C53.8 18.2 58 22 58 26.7c0 4.6-3.9 8.3-8.7 8.3Z" fill="#e8f3fc" stroke="#1265b7" stroke-width="3.5" stroke-linejoin="round"/>
+    <circle cx="14" cy="56" r="5" fill="#ffffff" stroke="#087f8c" stroke-width="3.5"/>
+    <circle cx="32" cy="56" r="5" fill="#1265b7" stroke="#1265b7" stroke-width="3.5"/>
+    <circle cx="50" cy="56" r="5" fill="#ffffff" stroke="#087f8c" stroke-width="3.5"/>
+</svg>

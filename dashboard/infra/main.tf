@@ -126,7 +126,7 @@ resource "azurerm_linux_function_app" "main" {
 
   app_settings = {
     "FUNCTIONS_WORKER_RUNTIME"                    = "node"
-    "WEBSITE_NODE_DEFAULT_VERSION"                = "~18"
+    "WEBSITE_NODE_DEFAULT_VERSION"                = "~22"
     "AZURE_STORAGE_ACCOUNT_NAME"                  = data.azurerm_storage_account.netbench.name
     "AZURE_STORAGE_TABLE_NAME"                    = "perf"
     "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING"    = "DefaultEndpointsProtocol=https;AccountName=${azurerm_storage_account.function.name};AccountKey=${azurerm_storage_account.function.primary_access_key};EndpointSuffix=core.windows.net"
@@ -136,7 +136,7 @@ resource "azurerm_linux_function_app" "main" {
 
   site_config {
     application_stack {
-      node_version = "18"
+      node_version = "22"
     }
     
     cors {

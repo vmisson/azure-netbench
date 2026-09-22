@@ -4,8 +4,10 @@
   "description": "API to retrieve network benchmark data from Azure Table Storage",
   "main": "index.js",
   "scripts": {
-    "start": "func start"
+    "start": "func start",
+    "test": "node --test data/*.test.js"
   },
+  "engines": { "node": ">=20" },
   "dependencies": {
     "@azure/data-tables": "^13.2.2",
     "@azure/identity": "^4.0.1"
